@@ -1,0 +1,119 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "pioEnv",
+      "type": "pickString",
+      "description": "PlatformIO environment",
+      "default": "onstepx_esp32_mf_oozoo_e4",
+      "options": [
+        "onstepx_esp32_mf_oozoo_e4"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "label": "PlatformIO: Build OnStepX",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\pio.ps1",
+        "run",
+        "-e",
+        "${input:pioEnv}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "PlatformIO: Upload OnStepX",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\pio.ps1",
+        "run",
+        "-e",
+        "${input:pioEnv}",
+        "-t",
+        "upload"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "PlatformIO: Monitor OnStepX",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\pio.ps1",
+        "device",
+        "monitor",
+        "-e",
+        "${input:pioEnv}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: Clean OnStepX",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\pio.ps1",
+        "run",
+        "-e",
+        "${input:pioEnv}",
+        "-t",
+        "clean"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "PlatformIO: Device List",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\pio.ps1",
+        "device",
+        "list"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
