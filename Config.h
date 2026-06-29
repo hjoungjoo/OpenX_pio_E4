@@ -31,6 +31,7 @@
 #define STA_IP_ADDR                   {192,168,0,2}               // Wifi Station/Ethernet IP Address
 #define STA_GW_ADDR                   {192,168,0,1}               // Wifi Station/Ethernet GATEWAY Address
 #define STA_SN_MASK                   {255,255,255,0}             // Wifi Station/Ethernet SUBNET Mask.
+#define WIFI_HIGH_PERFORMANCE         ON                          // ON disables WiFi sleep for lower latency
 
 // station 1
 // #define STA1_HOST_NAME                "Office"

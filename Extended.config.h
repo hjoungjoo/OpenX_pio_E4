@@ -23,7 +23,7 @@
                                           //         error and status messages, use CONSOLE for VT100 debug console,
                                           //         or use PROFILER for VT100 task profiler.
 #define DEBUG_SERVO                   OFF //    OFF, n. Where n=1 to 9 as the designated axis for logging servo activity.     Option
-#define DEBUG_ECHO_COMMANDS   ERRORS_ONLY //    OFF, Use ON or ERRORS_ONLY to log commands to the debug serial port.          Option
+#define DEBUG_ECHO_COMMANDS           OFF //    OFF, Use ON or ERRORS_ONLY to log commands to the debug serial port.          Option
 #define DEBUG_RTT                     OFF //    OFF,https://github.com/koendv/RTTStream/tree/main    Option
 #define SERIAL_DEBUG               Serial // Serial, Use any available h/w serial port. Serial1 or Serial2, etc.              Option
 //#define SERIAL_DEBUG               rtt  // Serial, Use any available h/w serial port. Serial1 or Serial2, etc.              Option

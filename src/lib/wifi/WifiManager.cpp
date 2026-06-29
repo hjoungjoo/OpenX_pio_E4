@@ -10,6 +10,17 @@
   void reconnectStationWrapper() { wifiManager.reconnectStation(); }
 #endif
 
+static void applyWifiPerformanceMode() {
+  #if WIFI_HIGH_PERFORMANCE == ON
+    #if defined(ESP32)
+      WiFi.setSleep(false);
+    #elif defined(ESP8266)
+      WiFi.setSleepMode(WIFI_NONE_SLEEP);
+    #endif
+    VLF("MSG: WiFi, high performance mode");
+  #endif
+}
+
 bool WifiManager::init() {
   if (!active) {
 
@@ -46,6 +57,7 @@ bool WifiManager::init() {
       VF("MSG: WiFi, starting Soft AP for SSID "); V(settings.ap.ssid); V(" PWD "); V(settings.ap.pwd); V(" CH "); VL(settings.ap.channel);
       WiFi.mode(WIFI_AP);
       delay(100);
+      applyWifiPerformanceMode();
       WiFi.softAPConfig(ap_ip, ap_gw, ap_sn);
       #if defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32C3)
         WiFi.setTxPower(WIFI_POWER_8_5dBm);
@@ -62,6 +74,7 @@ bool WifiManager::init() {
       VF("MSG: WiFi, starting Station for SSID "); V(sta->ssid); V(" PWD "); VL(staPwd->password);
       WiFi.mode(WIFI_STA);
       delay(100);
+      applyWifiPerformanceMode();
       if (!sta->dhcpEnabled) WiFi.config(sta_ip, sta_gw, sta_sn);
       #if defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32C3)
         WiFi.setTxPower(WIFI_POWER_8_5dBm);
@@ -73,6 +86,7 @@ bool WifiManager::init() {
       VF("MSG: WiFi, starting Station for SSID "); V(sta->ssid); V(" PWD "); VL(staPwd->password);
       WiFi.mode(WIFI_AP_STA);
       delay(100);
+      applyWifiPerformanceMode();
       if (!sta->dhcpEnabled) WiFi.config(sta_ip, sta_gw, sta_sn);
       WiFi.softAPConfig(ap_ip, ap_gw, ap_sn);
       #if defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32C3)

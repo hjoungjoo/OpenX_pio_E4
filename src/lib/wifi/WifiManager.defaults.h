@@ -96,6 +96,10 @@
 #define STA_AUTO_RECONNECT          false // normally not enabled
 #endif
 
+#ifndef WIFI_HIGH_PERFORMANCE
+#define WIFI_HIGH_PERFORMANCE         OFF // ON disables WiFi sleep for lower latency
+#endif
+
 #ifndef STA_SSID
 #define STA_SSID                    "Home" // Wifi Station SSID to connnect to
 #endif
