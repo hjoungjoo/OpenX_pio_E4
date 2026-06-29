@@ -160,8 +160,11 @@ bool Telescope::command(char reply[], char command[], char parameter[], bool *su
 
     // :ENVRESET# Wipe flash
     if (command[1] == 'N' && parameter[0] == 'V' && parameter[1] == 'R' && parameter[2] == 'E' && parameter[3] == 'S' && parameter[4] == 'E' && parameter[5] == 'T' && parameter[6] == 0) {
-      nv().volume().invalidateNextMount();
-      strcpy(reply, "NV memory will be cleared on the next boot.");
+      if (nv().volume().invalidateNextMount() == NvVolume::Status::Ok) {
+        strcpy(reply, "NV memory will be cleared on the next boot.");
+      } else {
+        strcpy(reply, "NV memory clear request failed.");
+      }
       *numericReply = false;
     } else
 

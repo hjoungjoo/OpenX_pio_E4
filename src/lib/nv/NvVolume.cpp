@@ -594,5 +594,10 @@ NvVolume::Status NvVolume::invalidateNextMount() {
   Status wb = writeBlockSt(*dev_, 0, sb0);
   if (wb != Status::Ok) return status_ = wb;
 
+  if (dev_->hasCommit()) {
+    NvDevice::IoStatus cb = dev_->commit();
+    if (cb != NvDevice::IoStatus::Ok) return status_ = mapIo(cb);
+  }
+
   return status_ = Status::Ok;
 }
