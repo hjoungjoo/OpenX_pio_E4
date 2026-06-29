@@ -83,9 +83,16 @@ class SerialLocal : public Stream {
         xSemaphoreTake(mutex, portMAX_DELAY);
       #endif
 
+      uint8_t next_tail = (xmit_tail + 1) & 0b1111111;
+      if (next_tail == xmit_index) {
+        #ifdef ESP32
+          xSemaphoreGive(mutex);
+        #endif
+        return 0;
+      }
+
       xmit_buffer[xmit_tail] = data;
-      xmit_tail++;
-      xmit_tail &= 0b1111111;
+      xmit_tail = next_tail;
       xmit_buffer[xmit_tail] = 0;
 
       #ifdef ESP32

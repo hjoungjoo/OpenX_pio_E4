@@ -26,11 +26,20 @@ void SerialLocal::transmit(const char *data) {
     xSemaphoreTake(mutex, portMAX_DELAY);
   #endif
 
-  int data_len = strlen(data);
-  for (int i = 0; i < data_len; i++) {
+  size_t data_len = strlen(data);
+  size_t freeSpace = recv_tail >= recv_head ? (sizeof(recv_buffer) - 1) - (recv_tail - recv_head) : recv_head - recv_tail - 1;
+  if (data_len > freeSpace) {
+    #ifdef ESP32
+      xSemaphoreGive(mutex);
+    #endif
+    return;
+  }
+
+  for (size_t i = 0; i < data_len; i++) {
     recv_buffer[recv_tail] = data[i];
     recv_tail++;
   }
+  recv_buffer[recv_tail] = 0;
 
   #ifdef ESP32
     xSemaphoreGive(mutex);

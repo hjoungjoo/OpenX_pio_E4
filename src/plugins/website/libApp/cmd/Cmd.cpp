@@ -5,26 +5,20 @@
 #include "Cmd.h"
 #include "../../locales/Locale.h"
 #include "../../../../libApp/commands/ProcessCmds.h"
+#include "../../../../libApp/commands/CommandBroker.h"
 
 int webTimeout = TIMEOUT_WEB;
 int cmdTimeout = TIMEOUT_CMD;
 
 void OnStepCmd::serialRecvFlush() {
-  while (SERIAL_ONSTEP.available() > 0) SERIAL_ONSTEP.read();
+  // CommandBroker owns SERIAL_LOCAL request/reply ordering.
 }
 
 // smart LX200 aware command and response (up to 80 chars) over serial
-bool OnStepCmd::processCommand(const char* cmd, char* response, long timeOutMs) {
-  SERIAL_ONSTEP.setTimeout(timeOutMs);
+bool OnStepCmd::processCommand(const char* cmd, char* response, long timeOutMs, size_t responseSize) {
+  if (response != NULL && responseSize > 0) response[0] = 0;
+  if (cmd == NULL || cmd[0] == 0 || response == NULL || responseSize == 0) return false;
 
-  // clear the read/write buffers
-  serialRecvFlush();
-
-  // send the command
-  SERIAL_ONSTEP.transmit(cmd);
-  delay(0);
-
-  response[0] = 0;
   bool noResponse = false;
   bool shortResponse = false;
   if (cmd[0] == (char)6 && cmd[1] == 0) shortResponse = true;
@@ -105,41 +99,41 @@ bool OnStepCmd::processCommand(const char* cmd, char* response, long timeOutMs) 
     if (cmd[0] == ';') { noResponse = false; shortResponse = false; }
   }
 
-  unsigned long timeout = millis() + (unsigned long)timeOutMs;
   if (noResponse) {
-    response[0] = 0;
-    delay(50);
-    return true;
-  } else
-  if (shortResponse) {
-    while ((long)(timeout - millis()) > 0) {
-      delay(1);
-      if (SERIAL_ONSTEP.receiveAvailable() >= 1) {
-        char *recv = SERIAL_ONSTEP.receive();
-        strcpy(response, recv);
-        break;
-      }
-    }
-
-    return (response[0] != 0);
-  } else {
-    int i = 0;
-    // get full response, '#' terminated
-    while ((long)(timeout - millis()) > 0) {
-      if (i++ % 10 == 0) delay(1);
-      if (SERIAL_ONSTEP.receiveAvailable() >= 1) {
-        char *recv = SERIAL_ONSTEP.receive();
-        strcat(response, recv);
-        if (response[strlen(response) - 1] == '#') break;
-      }
-    }
-
-    return response[strlen(response) - 1] == '#';
+    bool queued = commandBroker.send(cmd);
+    delay(0);
+    return queued;
   }
+
+  uint8_t handle = commandBroker.request(cmd, timeOutMs);
+  if (handle == 0) return false;
+
+  char brokerResponse[80] = "";
+  unsigned long timeout = millis() + (unsigned long)timeOutMs + 25UL;
+  while ((long)(timeout - millis()) >= 0) {
+    CommandBrokerStatus status = commandBroker.result(handle, brokerResponse, sizeof(brokerResponse));
+    if (status == CB_DONE) {
+      sstrcpyex(response, brokerResponse, responseSize);
+      if (shortResponse) return response[0] != 0;
+
+      size_t len = strlen(response);
+      return len > 0 && response[len - 1] == '#';
+    }
+
+    if (status == CB_TIMEOUT || status == CB_FREE) return false;
+    delay(1);
+  }
+
+  commandBroker.release(handle);
+  return false;
 }
 
 bool OnStepCmd::command(const char* command, char* response) {
-  bool success = processCommand(command, response, webTimeout);
+  return this->command(command, response, 80);
+}
+
+bool OnStepCmd::command(const char* command, char* response, size_t responseSize) {
+  bool success = processCommand(command, response, webTimeout, responseSize);
   int l = strlen(response) - 1;
   if (l >= 0 && response[l] == '#') response[l] = 0;
   return success;

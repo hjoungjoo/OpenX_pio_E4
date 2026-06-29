@@ -162,7 +162,8 @@ bool Convert::dmsToDouble(double *value, char *dms, bool signPresent, PrecisionM
 
   if ((p == PM_HIGHEST || p == PM_HIGH) && !secondsOff) {
     // make sure the seperator is an allowed character, then convert the seconds part
-    if (*dms++ != ':' && *dms++ != '\'') return false;
+    char sep = *dms++;
+    if (sep != ':' && sep != '\'') return false;
     if (!atof2(dms, &second, false)) return false;
   }
 

@@ -68,7 +68,7 @@
                                           //         BTT_SKR_PRO, etc.  Other boards and more info. in ~/src/Constants.h
 
 // SERIAL PORT COMMAND CHANNELS --------------------- see https://onstep.groups.io/g/main/wiki/Configuration_Controller#SERIAL_PORTS
-#define SERIAL_A_BAUD_DEFAULT      460800 //   9600, n. Where n=9600,19200,57600,115200,230400,460800 (common baud rates.)    Infreq
+#define SERIAL_A_BAUD_DEFAULT      115200 //   9600, n. Where n=9600,19200,57600,115200,230400,460800 (common baud rates.)    Infreq
 #define SERIAL_B_BAUD_DEFAULT         OFF //   9600, n. Baud rate as above. See (src/pinmaps/) for Serial port assignments.   Infreq
 #define SERIAL_B_ESP_FLASHING         OFF //    OFF, ON Upload ESP8266 WiFi firmware through SERIAL_B with :ESPFLASH# cmd.    Option
 #define SERIAL_C_BAUD_DEFAULT         OFF //    OFF, n. Baud rate as above. See (src/pinmaps/) for Serial port assignments.   Infreq
@@ -240,7 +240,7 @@
                                           //         Too fast motors stall/gears slam or too slow and sluggish in backlash.
 #define TRACKING_RATE_SAFETY_LIMIT   20.0F // Local safety cap, x sidereal, for computed tracking rates.
 #define TRACK_AUTOSTART               OFF //    OFF, ON Start with tracking enabled.                                          Option
-#define TRACK_COMPENSATION_DEFAULT REFRACTION_DUAL // OFF, No compensation or REFRACTION, REFRACTION_DUAL, MODEL, MODEL_DUAL. Option
+#define TRACK_COMPENSATION_DEFAULT    OFF // OFF, No compensation or REFRACTION, REFRACTION_DUAL, MODEL, MODEL_DUAL. Option
 #define TRACK_COMPENSATION_MEMORY     OFF //    OFF, ON Remembers refraction/pointing model compensated tracking settings.    Option
 
 // SLEWING BEHAVIOUR ------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#SLEWING

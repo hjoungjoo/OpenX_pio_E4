@@ -76,8 +76,14 @@ char* Buffer::getCmd() {
 char* Buffer::getParameter() {
   // the remaining parameter
   pb[0] = 0;
-  if (cbp > 4) memmove(pb, (char *)&cb[3], cbp-4);
-  pb[cbp-4] = 0;
+  int end = strlen(cb);
+  if (end > 0 && cb[end - 1] == '#') end--;
+  int len = end - 3;
+  if (len > 0) {
+    if (len > bufferSize - 1) len = bufferSize - 1;
+    memmove(pb, (char *)&cb[3], len);
+    pb[len] = 0;
+  }
   return pb;
 }
 

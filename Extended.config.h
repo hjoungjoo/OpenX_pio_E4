@@ -26,8 +26,8 @@
 #define DEBUG_ECHO_COMMANDS   ERRORS_ONLY //    OFF, Use ON or ERRORS_ONLY to log commands to the debug serial port.          Option
 #define DEBUG_RTT                     OFF //    OFF,https://github.com/koendv/RTTStream/tree/main    Option
 #define SERIAL_DEBUG               Serial // Serial, Use any available h/w serial port. Serial1 or Serial2, etc.              Option
-//#define SERIAL_DEBUG               rtt // Serial, Use any available h/w serial port. Serial1 or Serial2, etc.              Option
-#define SERIAL_DEBUG_BAUD          460800 // 230400, n. Where n=9600,19200,57600,115200,230400,460800,921600 (common baud rates.)    Option
+//#define SERIAL_DEBUG               rtt  // Serial, Use any available h/w serial port. Serial1 or Serial2, etc.              Option
+#define SERIAL_DEBUG_BAUD          115200 // 230400, n. Where n=9600,19200,57600,115200,230400,460800,921600 (common baud rates.)    Option
 
 // TMC DRIVER BACKEND --------------------------------------------------------------------------------------------------------------
 #define DRIVER_TMC_STEPPER              // Use the TMCStepper library for UART/SPI TMC drivers.

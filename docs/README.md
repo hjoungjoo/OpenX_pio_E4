@@ -11,6 +11,7 @@ Add new documents and document updates under `docs/`.
 | `architecture_en.md` | English firmware structure, boot flow, task model, axis and motor control architecture |
 | `communication_protocol.md` | Korean external channels, command frames, WiFi/ST4/internal command flow |
 | `communication_protocol_en.md` | English external channels, command frames, WiFi/ST4/internal command flow |
+| `CHANGE_HISTORY.md` | Korean source change history and verification notes |
 | `COMMAND_REFERENCE.md` | OnStep command reference |
 | `COMMAND_REFERENCE_KO.md` | Korean OnStep command reference |
 | `platformio.md` | PlatformIO build and upload notes |

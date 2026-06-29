@@ -427,8 +427,9 @@ double Site::rangeAmPm(double time) {
 bool Site::strToDate(char *ymd, GregorianDate *date) {
   GregorianDate temp;
   char m[3], d[3], y[5];
+  size_t len = strlen(ymd);
 
-  if (strlen(ymd) != 8 && strlen(ymd) != 10) return false;
+  if (len != 8 && len != 10) return false;
 
   m[0] = *ymd++; m[1] = *ymd++; m[2] = 0;
   if (!convert.atoi2(m, &temp.month, false)) return false;
@@ -439,7 +440,7 @@ bool Site::strToDate(char *ymd, GregorianDate *date) {
   if (*ymd++ != '/') return false;
 
   y[0] = *ymd++; y[1] = *ymd++; y[2] = 0;
-  if (strlen(ymd) == 10) { y[2] = *ymd++; y[3] = *ymd++;  y[4] = 0; }
+  if (len == 10) { y[2] = *ymd++; y[3] = *ymd++;  y[4] = 0; }
   if (!convert.atoi2(y, &temp.year, false)) return false;
   if (temp.year < 100) { if (temp.year > 20) temp.year += 2000; else temp.year += 2100; }
 
