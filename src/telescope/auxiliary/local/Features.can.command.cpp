@@ -188,7 +188,7 @@ void Features::processCommand() {
           #endif
           {
             digitalWriteEx(device[idx].pin, (v != 0) == device[idx].active);
-            if (p == MOMENTARY_SWITCH && device[idx].value) momentarySwitchTime[idx] = 50;
+            if (p == MOMENTARY_SWITCH && device[idx].value) momentarySwitchTime[idx] = MOMENTARY_SWITCH_TICKS;
           }
         } else
 

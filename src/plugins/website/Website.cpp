@@ -10,6 +10,7 @@ void pollWebSvr(void * parameter) {
   for(;;) {
     www.handleClient();
     state.poll();
+    delay(1);
   }
 }
 

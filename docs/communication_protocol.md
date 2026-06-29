@@ -2,7 +2,9 @@
 
 작성 기준: 현재 작업트리의 OnStepX 소스와 `Config.h` 설정.
 
-이 문서는 OnStepX가 외부 프로그램, WiFi 클라이언트, Bluetooth SPP, ST4/SHC, 내부 명령 큐와 통신하는 방법을 정리한다. 개별 명령의 전체 목록은 기존 `docs/COMMAND_REFERENCE.md`를 기준 문서로 사용한다.
+English version: `communication_protocol_en.md`
+
+이 문서는 OnStepX가 외부 프로그램, WiFi 클라이언트, Bluetooth SPP, ST4/SHC, 내부 명령 큐와 통신하는 방법을 정리한다. 개별 명령의 전체 목록은 `COMMAND_REFERENCE.md`를 기준 문서로 사용한다.
 
 ## 현재 빌드 기준
 
@@ -232,7 +234,7 @@ SHC에서 들어오는 단일 바이트 가이드 명령은 다음처럼 직접 
 
 ## 대표 명령 예
 
-자세한 명령표는 `docs/COMMAND_REFERENCE.md`를 본다. 개발/테스트 때 자주 쓰는 기본 명령은 다음과 같다.
+자세한 명령표는 `COMMAND_REFERENCE.md`를 본다. 개발/테스트 때 자주 쓰는 기본 명령은 다음과 같다.
 
 | 명령 | 의미 |
 | --- | --- |
@@ -253,4 +255,3 @@ SHC에서 들어오는 단일 바이트 가이드 명령은 다음처럼 직접 
 - `SERIAL_LOCAL` 또는 `CommandBroker`를 통해 기존 `:Mn#`, `:Qn#` 계열 명령 호출
 
 안전 설계에서는 입력 끊김 timeout, 버튼 release 시 정지, goto 중 입력 처리 정책, 최대 guide rate 제한을 반드시 포함해야 한다.
-

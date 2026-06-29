@@ -1,6 +1,8 @@
 ﻿# OnStepX 펌웨어 아키텍처 문서
 
-작성 기준: 현재 작업트리의 OnStepX 소스와 `Config.h` 설정.
+작성 기준: 2026-06-29 현재 작업트리의 OnStepX 소스, `Config.h`, `platformio.ini` 설정. 최근 성능 점검 변경(`REFRACTION_DUAL`, 웹 태스크 yield, Auxiliary poll rate 조정, TMC driver status OFF)을 포함한다.
+
+English version: `architecture_en.md`
 
 이 문서는 OnStepX 펌웨어가 어떻게 초기화되고, 어떤 계층으로 나뉘며, 통신 명령이 실제 모션 제어까지 어떻게 전달되는지 설명한다.
 
@@ -41,14 +43,15 @@ flowchart TB
 | 영역 | 설정 |
 | --- | --- |
 | MCU/보드 | ESP32 Dev Module compatible, `MF_OOZOO_E4` pinmap |
-| 마운트 | `ALTAZM_UNL` |
-| Axis1/Axis2 | `TMC2209`, mount 활성 |
+| 마운트 | `ALTAZM_UNL`, `TOPOCENTRIC`, `REFRACTION_DUAL` tracking compensation |
+| Axis1/Axis2 | `TMC2209`, 64000 steps/degree, tracking 256 microsteps, goto 16 microsteps, driver status `OFF` |
 | Axis3 | `OFF`, rotator 비활성 |
 | Axis4~Axis9 | `OFF`, local focuser 축 비활성 |
 | WiFi | `SERIAL_RADIO WIFI_ACCESS_POINT` |
-| Web server | `WEB_SERVER ON`으로 확장 |
+| Web server | `WEB_SERVER ON`, `website` plugin 활성 |
 | ST4 | `ST4_INTERFACE ON`, `ST4_HAND_CONTROL ON` |
-| Auxiliary features | Feature1/2 dew heater 활성 |
+| Weather/temperature | `BME280_0x76`, internal temperature display 활성 |
+| Auxiliary features | Feature1/2 dew heater 활성, 현재 Auxiliary poll 100ms |
 | PlatformIO env | `onstepx_esp32_mf_oozoo_e4` |
 
 ## 빌드 구성 계층
@@ -79,6 +82,7 @@ flowchart TB
 - HAL 및 pinmap 포함
 - 기능 존재 여부 매크로 생성
 - `MOUNT_PRESENT`, `ROTATOR_PRESENT`, `FOCUSER_PRESENT`, `FEATURES_PRESENT` 결정
+- local command channel, standard IP serial, persistent IP serial 강제 활성화
 - `ST4_HAND_CONTROL ON`일 때 `SERIAL_ST4_MASTER ON` 설정
 
 ### `src/Validate.h`
@@ -99,32 +103,42 @@ flowchart TB
 8. 입력 sense polling 태스크 시작
 9. `telescope.init()`
 10. `commandChannelInit()`
-11. 플러그인 초기화
-12. profiler 태스크 시작
-13. `sense.poll()`
-14. `telescope.ready = true`
+11. `tasks.yield(2000)`으로 초기 command/transport settling
+12. 플러그인 초기화
+13. profiler 태스크 시작(`DEBUG == PROFILER`일 때)
+14. `sense.poll()`
+15. `telescope.ready = true`
 
 `loop()`는 별도 로직 없이 `tasks.yield()`만 호출한다. 따라서 주기 동작은 모두 OnTask 태스크로 관리된다.
 
 ## 태스크 모델
 
-OnStepX는 `src/lib/tasks/OnTask.*`의 cooperative scheduler를 사용한다. 각 서브시스템은 필요한 주기로 태스크를 등록한다.
+OnStepX는 `src/lib/tasks/OnTask.*`의 cooperative scheduler를 중심으로 동작한다. ESP32에서 웹 서버는 별도 FreeRTOS 태스크로 분리되고, step pulse 출력은 Step/Dir motor 계층의 hardware timer가 담당한다.
 
 대표 태스크:
 
-| 태스크 | 생성 위치 | 주기/특징 | 역할 |
+| 태스크 | 생성 위치 | 현재 주기/우선순위 | 역할 |
 | --- | --- | --- | --- |
-| `SysSens` | `OnStepX.ino` | 설정 기반 ms | 입력 sense polling |
-| `SysCmd*` | `ProcessCmds.cpp` | 약 2500us | 외부 명령 채널 polling |
-| `CmdBrkr` | `CommandBroker.cpp` | 3ms | 내부 명령 큐 처리 |
-| `MtTrack` | `Mount.cpp` | 1000ms | 추적 rate/상태 update |
-| `MtGuide` | `Guide.cpp` | 빠른 polling | guide 상태 update |
-| `St4Mntr` | `St4.cpp` | `HAL_FRACTIONAL_SEC` 기반 | ST4 버튼/tone 감지 |
-| `St4Comm` | `St4.cpp` | 100us minimum | SHC 직렬 링크 |
-| `StaLed` | `Telescope.cpp` | 500ms | 상태 LED/error flash |
+| `Motor_1/2` | `StepDir.cpp` | hardware timer, priority 0 | Axis1/2 step pulse 생성 |
+| `Ax1Motn/Ax2Motn` | `Axis.cpp` | `HAL_FRACTIONAL_SEC_US`, priority 1 | 축 위치/속도 update |
+| `MntGoto` | `Goto.cpp` | `HAL_FRACTIONAL_SEC_US`, priority 3 | goto stage/refinement |
+| `MtGuide` | `Guide.cpp` | `HAL_FRACTIONAL_SEC_US / 2`, priority 3 | guide 상태와 pulse guide update |
+| `MtTrack` | `Mount.cpp` | 1000ms, priority 6 | tracking rate/상태 update |
+| `MtLimit` | `Limits.cpp` | 100ms, priority 2 | motion limit 검사 |
+| `SysSens` | `OnStepX.ino` | 약 5ms, priority 7 | 입력 sense polling |
+| `SysCmd*` | `ProcessCmds.cpp` | 2500us, priority 5 | 외부 명령 채널 polling |
+| `SysCmdL` | `ProcessCmds.cpp` | 3ms, priority 5 | local command channel |
+| `CmdBrkr` | `CommandBroker.cpp` | 3ms, priority 5 | 내부 명령 큐 처리 |
+| `St4Mntr` | `St4.cpp` | 약 10ms, priority 2 | ST4 버튼/tone 감지 |
+| `St4Comm` | `St4.cpp` | 100us minimum, priority 1 | SHC 직렬 링크 |
+| `AuxPoll` | `Features.cpp` | `FEATURES_POLL_RATE_MS`, priority 6 | Auxiliary feature polling |
+| `WeaPoll` | `Weather.cpp` | 1000ms, priority 7 | BME280/weather polling |
+| `SysTemp` | `Telescope.cpp` | 500ms, priority 6 | MCU temperature polling |
+| `StaLed` | `Telescope.cpp` | 500ms, priority 4 | 상태 LED/error flash |
 | `WifiChk` | `WifiManager.cpp` | 8000ms | Station reconnect |
+| `WebSvrTask` | `Website.cpp` | FreeRTOS core 0, priority 1 | HTTP 요청과 web state polling |
 
-모션과 관련된 빠른 타이밍은 Axis/Motor 계층의 timer 또는 low-level driver가 담당하고, 상위 태스크는 상태와 목표 rate를 갱신한다.
+현재 ESP32 HAL의 `HAL_FRACTIONAL_SEC`는 약 105.26Hz이므로 Axis/Goto 계층의 motion update는 약 9.5ms 단위다. 실제 step pulse timing은 이보다 아래 계층인 hardware timer에서 만들어지며, 상위 태스크는 목표 rate와 상태를 갱신한다.
 
 ## Telescope 계층
 
@@ -170,6 +184,10 @@ flowchart LR
 - `SERIAL_SIP`
 - `SERIAL_LOCAL`
 
+현재 작업트리에서는 `Common.h`가 local command channel, standard IP serial channel, persistent IP serial channel을 활성화한다. WiFi AP 모드에서는 TCP command stream과 web server가 함께 동작한다.
+
+TMC2209 UART는 command transport가 아니라 motor driver 제어/설정 버스다. 현재 하드웨어는 1-wire UART 구성에서 RX readback을 사용하지 않는 전제로 잡혀 있으므로, `SERIAL_TMC_RX_DISABLE true`와 함께 Axis1/Axis2 `DRIVER_STATUS OFF`가 유지된다. `DRIVER_STATUS`를 켜면 TMC 상태 레지스터 readback이 필요해지고, RX가 연결되지 않았거나 1-wire readback이 불안정한 환경에서는 CRC error 또는 불필요한 polling 부하가 생길 수 있다.
+
 ### `CommandProcessor`
 
 각 command channel마다 `CommandProcessor` 인스턴스가 생긴다. `poll()`은 다음 순서로 동작한다.
@@ -203,6 +221,8 @@ flowchart LR
 
 `Mount::update()`는 tracking rate, guide rate, PEC rate를 합산해 Axis1/Axis2의 synchronized frequency를 갱신한다. Goto 또는 고속 guide 상태에서는 상태 LED를 slew 상태로 전환하고 `xBusy`를 갱신한다.
 
+현재 설정은 `TRACK_COMPENSATION_DEFAULT REFRACTION_DUAL`, `TRACK_COMPENSATION_MEMORY OFF`다. 부팅 시 tracking compensation은 항상 설정 파일의 기본값으로 시작하고, 대기 굴절 보정을 양축에 반영한다. `ALTAZM_UNL`/topocentric 구성에서는 장시간 tracking 정확도를 위해 이 설정이 핵심 보정 계층이다.
+
 ## Axis와 Motor 계층
 
 `Axis`는 축 단위의 공통 모션 제어 객체다. 축의 단위는 용도에 따라 radians, degrees, microns 등이 될 수 있다.
@@ -229,6 +249,20 @@ Motor 계층은 실제 driver 모델별 구현을 가진다.
 - MKS Servo
 
 현재 설정에서는 Axis1/Axis2가 TMC2209 stepper driver를 사용한다.
+
+현재 Axis1/Axis2의 주요 모션 설정:
+
+| 항목 | 값 |
+| --- | --- |
+| Steps per degree | 64000 |
+| Tracking microsteps | 256 |
+| Goto microsteps | 16 |
+| Tracking 1 microstep | 약 0.05625 arcsec |
+| Goto 1 microstep | 약 0.9 arcsec |
+| Goto max rate | 5 deg/sec 기준 약 20k step/sec |
+| ESP32 Step/Dir lower period limit | `HAL_MAXRATE_LOWER_LIMIT 40us` 기준 약 25k step/sec급, pulse mode 보정 포함 시 더 높은 영역까지 허용 |
+
+정밀도 관점에서는 tracking microstep 256 설정이 이미 매우 촘촘하다. 개선 여지는 단순 microstep 증가보다 tracking compensation, backlash, guide/refinement, 기계적 유격, 전류/decay tuning, 실제 sidereal drift 측정 쪽에서 더 크다. Driver 상태 readback은 진단에는 유용하지만 현재 1-wire/RX OFF 하드웨어에서는 안정성 우선으로 비활성화한다.
 
 ## 좌표와 Goto
 
@@ -266,7 +300,7 @@ flowchart LR
   Mount --> Axis["Axis synchronized frequency"]
 ```
 
-현재 작업트리에서는 SHC 활성 후 tone loss가 1500ms 이상 지속될 때만 ST4 serial을 해제한다. 이는 짧은 tone 누락으로 인한 SHC 재접속 증상을 줄이기 위한 보호다.
+현재 작업트리에서는 `ST4_SHC_TONE_LOSS_MS` 기본값 1500ms를 사용한다. SHC 활성 후 tone loss가 이 시간 이상 지속될 때만 ST4 serial을 해제하므로, 짧은 tone 누락으로 인한 SHC 재접속 증상을 줄인다.
 
 ## NV 저장 구조
 
@@ -305,6 +339,8 @@ NV 계층은 `src/lib/nv/` 아래에 있으며, `Telescope::init()`에서 volume
 
 명령용 TCP stream은 `Serial_IP_Wifi.cpp`의 `IPSerial`이 담당한다. Web server 객체는 `src/lib/wifi/webServer/WebServer.cpp`에서 포트 80으로 생성된다.
 
+`website` 플러그인은 `src/plugins/website/Website.cpp`에서 route를 등록하고, `WebSvrTask` FreeRTOS 태스크를 core 0, priority 1로 시작한다. 루프는 `www.handleClient()`와 `state.poll()`을 호출한 뒤 `delay(1)`로 yield한다. 이 yield는 HTTP polling이 core를 계속 점유하는 상황을 줄이기 위한 현재 성능 개선점이다.
+
 ## Rotator, Focuser, Features
 
 이 세 계층은 compile-time feature gating에 따라 활성화된다.
@@ -315,6 +351,8 @@ NV 계층은 `src/lib/nv/` 아래에 있으며, `Telescope::init()`에서 volume
 - CAN remote 설정이 있으면 remote client/server 구조도 가능
 
 현재 설정에서는 local rotator/focuser 축은 비활성이고, auxiliary feature로 dew heater 2개가 활성화되어 있다.
+
+Auxiliary feature monitor는 `FEATURES_POLL_RATE_MS`를 사용한다. 현재 Feature1/2가 dew heater 용도이므로 poll rate는 100ms이며, momentary switch, cover switch, intervalometer처럼 빠른 반응이 필요한 feature가 포함되면 기본 20ms로 전환된다. Momentary switch 지속 시간은 ms 값을 poll tick으로 환산하므로 poll rate 변경 후에도 동작 시간이 유지된다.
 
 ## 플러그인 구조
 
@@ -329,6 +367,8 @@ NV 계층은 `src/lib/nv/` 아래에 있으며, `Telescope::init()`에서 volume
 
 명령 처리 플러그인은 core subsystem보다 먼저 호출된다. 따라서 기존 명령과 충돌하지 않도록 prefix를 신중히 정해야 한다.
 
+현재 설정은 `PLUGIN1 website`, `PLUGIN1_COMMAND_PROCESSING OFF`다. 즉 웹 UI와 route는 활성화되어 있지만 telescope command dispatch에는 플러그인 명령을 추가하지 않는다.
+
 ## PlatformIO 통합 구조
 
 이 작업트리는 Arduino sketch 구조를 유지하면서 PlatformIO로 빌드한다.
@@ -341,9 +381,21 @@ NV 계층은 `src/lib/nv/` 아래에 있으며, `Telescope::init()`에서 volume
 | `tools/platformio_main.cpp` | `OnStepX.ino`를 PlatformIO 빌드에 연결 |
 | `platformio_deps.cpp` | PlatformIO LDF가 ESP32 내장 라이브러리를 찾도록 보조 |
 | `.vscode/tasks.json` | VS Code 빌드/업로드/모니터 태스크 |
-| `docs/platformio.md` | PlatformIO 사용법 |
+| `platformio.md` | PlatformIO 사용법 |
 
 현재 기본 환경은 `onstepx_esp32_mf_oozoo_e4`다.
+
+`platformio.ini`의 현재 핵심 설정:
+
+| 항목 | 값 |
+| --- | --- |
+| Platform | `platformio/espressif32@6.7.0` |
+| Board/framework | `esp32dev`, Arduino |
+| Partition | `huge_app.csv` |
+| Upload/monitor | 921600 / 115200 baud |
+| Source entry | `tools/platformio_main.cpp`, `platformio_deps.cpp`, `src/**` |
+| Excluded source | `OnStepX.ino`, `src/lib/commands/commands.ino`, `src/telescope/mount/coordinates/coordinates.ino` |
+| 주요 library | `teemuatlut/TMCStepper@^0.7.3`, Adafruit BME280/Unified Sensor/BusIO |
 
 ## 확장 시 권장 경로
 
@@ -387,7 +439,7 @@ flowchart LR
 2. 명령이 여러 subsystem과 충돌하지 않는지 `Telescope::command()` 분배 순서를 확인한다.
 3. 성공/실패는 `CommandError`로 표현한다.
 4. 문자열 응답이면 `numericReply=false`를 설정한다.
-5. 필요하면 `docs/COMMAND_REFERENCE.md`도 업데이트한다.
+5. 필요하면 `COMMAND_REFERENCE.md`도 업데이트한다.
 
 ## 빠른 코드 지도
 
@@ -401,11 +453,14 @@ flowchart LR
 | 명령 채널 | `src/libApp/commands/ProcessCmds.cpp` |
 | 프레임 파서 | `src/lib/commands/BufferCmds.cpp` |
 | WiFi TCP 명령 | `src/lib/serial/Serial_IP_Wifi.cpp` |
+| Web UI/plugin | `src/plugins/website/Website.cpp` |
 | ST4/SHC | `src/telescope/mount/st4/St4.cpp` |
 | 마운트 | `src/telescope/mount/Mount.cpp` |
 | 가이드 | `src/telescope/mount/guide/Guide.cpp` |
 | Goto | `src/telescope/mount/goto/Goto.cpp` |
 | 축 제어 | `src/lib/axis/Axis.cpp` |
-| 모터 드라이버 | `src/lib/axis/motor/` |
-| PlatformIO | `platformio.ini`, `docs/platformio.md` |
-
+| Step/Dir pulse | `src/lib/axis/motor/stepDir/StepDir.cpp` |
+| TMC2209 driver | `src/lib/axis/motor/stepDir/tmc/tmcStepper/tmc2209/Tmc2209.cpp` |
+| Auxiliary features | `src/telescope/auxiliary/local/Features.cpp`, `src/telescope/auxiliary/local/Features.h` |
+| 모터 드라이버 전체 | `src/lib/axis/motor/` |
+| PlatformIO | `platformio.ini`, `platformio.md` |

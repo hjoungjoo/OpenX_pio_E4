@@ -240,7 +240,7 @@
                                           //         Too fast motors stall/gears slam or too slow and sluggish in backlash.
 #define TRACKING_RATE_SAFETY_LIMIT   20.0F // Local safety cap, x sidereal, for computed tracking rates.
 #define TRACK_AUTOSTART               OFF //    OFF, ON Start with tracking enabled.                                          Option
-#define TRACK_COMPENSATION_DEFAULT    OFF //    OFF, No compensation or REFRACTION, REFRACTION_DUAL, MODEL, MODEL_DUAL.       Option
+#define TRACK_COMPENSATION_DEFAULT REFRACTION_DUAL // OFF, No compensation or REFRACTION, REFRACTION_DUAL, MODEL, MODEL_DUAL. Option
 #define TRACK_COMPENSATION_MEMORY     OFF //    OFF, ON Remembers refraction/pointing model compensated tracking settings.    Option
 
 // SLEWING BEHAVIOUR ------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#SLEWING

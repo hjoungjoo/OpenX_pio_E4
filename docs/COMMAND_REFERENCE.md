@@ -1,5 +1,7 @@
 # OnStepX Command Reference
 
+Korean version: `COMMAND_REFERENCE_KO.md`
+
 This reference is derived from the current command handlers in the source tree, primarily the `*.command.cpp` files plus the shared command processor in `src/libApp/commands/ProcessCmds.cpp`.
 
 Scope notes:

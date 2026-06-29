@@ -1,5 +1,7 @@
 ﻿# OnStepX 명령 레퍼런스
 
+English version: `COMMAND_REFERENCE.md`
+
 이 레퍼런스는 현재 소스 트리의 명령 핸들러에서 정리한 문서다. 주로 각 `*.command.cpp` 파일과 공통 명령 처리기인 `src/libApp/commands/ProcessCmds.cpp`를 기준으로 했다.
 
 범위:
@@ -858,4 +860,3 @@ Axis parameter type code:
 - `src/telescope/auxiliary/local/Features.command.cpp`
 - 대응되는 CAN transport handler
 - `src/libApp/commands/ProcessCmds.cpp`
-

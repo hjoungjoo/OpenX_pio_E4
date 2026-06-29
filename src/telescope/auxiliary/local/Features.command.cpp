@@ -164,7 +164,7 @@ bool Features::command(char *reply, char *command, char *parameter, bool *suppre
             #endif
 
             digitalWriteEx(device[i].pin, v == device[i].active);
-            if (device[i].purpose == MOMENTARY_SWITCH && device[i].value) momentarySwitchTime[i] = 50;
+            if (device[i].purpose == MOMENTARY_SWITCH && device[i].value) momentarySwitchTime[i] = MOMENTARY_SWITCH_TICKS;
 
           } else *commandError = CE_PARAM_RANGE;
         } else *commandError = CE_PARAM_FORM;

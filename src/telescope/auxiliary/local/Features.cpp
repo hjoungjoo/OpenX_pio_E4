@@ -55,7 +55,7 @@ bool Features::init() {
     if (device[i].purpose == SWITCH || device[i].purpose == MOMENTARY_SWITCH || device[i].purpose == HIDDEN_SWITCH) {
       pinModeEx(device[i].pin, OUTPUT);
       digitalWriteEx(device[i].pin, device[i].value == device[i].active);
-      if (device[i].purpose == MOMENTARY_SWITCH && device[i].value) momentarySwitchTime[i] = 50;
+      if (device[i].purpose == MOMENTARY_SWITCH && device[i].value) momentarySwitchTime[i] = MOMENTARY_SWITCH_TICKS;
       if (device[i].purpose == HIDDEN_SWITCH) device[i].purpose = OFF;
     } else
 
@@ -91,8 +91,8 @@ bool Features::init() {
     }
   }
 
-  VF("MSG: Auxiliary, start feature monitor task (rate 20ms priority 6)... ");
-  if (tasks.add(20, 0, true, 6, featuresPollWrapper, "AuxPoll")) { VLF("success"); } else { VLF("FAILED!"); return false; }
+  VF("MSG: Auxiliary, start feature monitor task (rate "); V(FEATURES_POLL_RATE_MS); VF("ms priority 6)... ");
+  if (tasks.add(FEATURES_POLL_RATE_MS, 0, true, 6, featuresPollWrapper, "AuxPoll")) { VLF("success"); } else { VLF("FAILED!"); return false; }
 
   ready = true;
 
