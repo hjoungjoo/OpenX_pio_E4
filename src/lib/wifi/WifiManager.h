@@ -79,6 +79,9 @@ class WifiManager {
     // stops WiFi
     void disconnect();
 
+    // suppress station reconnect once the access point is being used for control
+    void notifyAccessPointUse();
+
     #if STA_AUTO_RECONNECT == true
       void reconnectStation();
     #endif
@@ -123,6 +126,24 @@ class WifiManager {
 
   private:
     bool settingsReady = false;
+
+    void beginStationConnection();
+    bool waitStationConnection(uint32_t timeoutMs);
+    void updateStationAddress();
+    void clearStationScanTarget();
+    void logStationScanResult();
+
+    bool stationScanBssidValid = false;
+    int32_t stationScanChannel = 0;
+    uint8_t stationScanBssid[6] = {0, 0, 0, 0, 0, 0};
+
+    #if STA_AUTO_RECONNECT == true
+      bool stationReconnectActive = false;
+      bool stationReconnectSuspended = false;
+      bool stationInitialConnectComplete = true;
+      unsigned long stationReconnectTimeoutMs = 0;
+      unsigned long stationReconnectAfterMs = 0;
+    #endif
 
     StationPassword stationPassword[WifiStationCount] =
     {

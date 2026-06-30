@@ -53,6 +53,7 @@
     if (!cmdSvrClient) {
       if (cmdSvr->hasClient()) {
         cmdSvrClient = cmdSvr->available();
+        if (cmdSvrClient) wifiManager.notifyAccessPointUse();
         clientEndTimeMs = millis() + clientTimeoutMs;
       }
       if (cmdSvrClient) {
@@ -94,6 +95,7 @@
   int IPSerial::read(void) {
     if (!active || !cmdSvrClient) return -1;
     if (persist) clientEndTimeMs = millis() + clientTimeoutMs;
+    wifiManager.notifyAccessPointUse();
     int c = cmdSvrClient.read();
     #if DEBUG_CMDSERVER == ON
       VF("MSG: read(), found: "); VL((char)c);

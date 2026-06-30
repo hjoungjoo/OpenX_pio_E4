@@ -18,32 +18,32 @@ void Website::init() {
   VLF("MSG: Website Plugin");
 
   VLF("MSG: Set webpage handlers");
-  www.on("/index.htm", handleRoot);
-  www.on("/index-ajax-get.txt", indexAjaxGet);
-  www.on("/index.txt", indexAjax);
+  www.on("/index.htm", []() { wifiManager.notifyAccessPointUse(); handleRoot(); });
+  www.on("/index-ajax-get.txt", []() { wifiManager.notifyAccessPointUse(); indexAjaxGet(); });
+  www.on("/index.txt", []() { wifiManager.notifyAccessPointUse(); indexAjax(); });
 
-  www.on("/mount.htm", handleMount);
-  www.on("/mount-ajax-get.txt", mountAjaxGet);
-  www.on("/mount-ajax.txt", mountAjax);
-  www.on("/libraryHelp.htm", handleLibraryHelp);
+  www.on("/mount.htm", []() { wifiManager.notifyAccessPointUse(); handleMount(); });
+  www.on("/mount-ajax-get.txt", []() { wifiManager.notifyAccessPointUse(); mountAjaxGet(); });
+  www.on("/mount-ajax.txt", []() { wifiManager.notifyAccessPointUse(); mountAjax(); });
+  www.on("/libraryHelp.htm", []() { wifiManager.notifyAccessPointUse(); handleLibraryHelp(); });
 
-  www.on("/rotator.htm", handleRotator);
-  www.on("/rotator-ajax-get.txt", rotatorAjaxGet);
-  www.on("/rotator-ajax.txt", rotatorAjax);
+  www.on("/rotator.htm", []() { wifiManager.notifyAccessPointUse(); handleRotator(); });
+  www.on("/rotator-ajax-get.txt", []() { wifiManager.notifyAccessPointUse(); rotatorAjaxGet(); });
+  www.on("/rotator-ajax.txt", []() { wifiManager.notifyAccessPointUse(); rotatorAjax(); });
 
-  www.on("/focuser.htm", handleFocuser);
-  www.on("/focuser-ajax-get.txt", focuserAjaxGet);
-  www.on("/focuser-ajax.txt", focuserAjax);
+  www.on("/focuser.htm", []() { wifiManager.notifyAccessPointUse(); handleFocuser(); });
+  www.on("/focuser-ajax-get.txt", []() { wifiManager.notifyAccessPointUse(); focuserAjaxGet(); });
+  www.on("/focuser-ajax.txt", []() { wifiManager.notifyAccessPointUse(); focuserAjax(); });
 
-  www.on("/auxiliary.htm", handleAux);
-  www.on("/auxiliary-ajax-get.txt", auxAjaxGet);
-  www.on("/auxiliary-ajax.txt", auxAjax);
+  www.on("/auxiliary.htm", []() { wifiManager.notifyAccessPointUse(); handleAux(); });
+  www.on("/auxiliary-ajax-get.txt", []() { wifiManager.notifyAccessPointUse(); auxAjaxGet(); });
+  www.on("/auxiliary-ajax.txt", []() { wifiManager.notifyAccessPointUse(); auxAjax(); });
 
-  www.on("/net.htm", handleNetwork);
+  www.on("/net.htm", []() { wifiManager.notifyAccessPointUse(); handleNetwork(); });
 
-  www.on("/", handleRoot);
+  www.on("/", []() { wifiManager.notifyAccessPointUse(); handleRoot(); });
   
-  www.onNotFound(handleNotFound);
+  www.onNotFound([]() { wifiManager.notifyAccessPointUse(); handleNotFound(); });
 
   VLF("MSG: Starting port 80 web server");
   www.begin();

@@ -37,6 +37,7 @@
     if (!cmdSvrClient && cmdSvr->hasClient()) {
       cmdSvrClient = cmdSvr->available();
       if (cmdSvrClient) {
+        wifiManager.notifyAccessPointUse();
         clientEndTimeMs = now + clientTimeoutMs;
         cmdBuffer[0] = 0;
         cmdBufferPos = 0;
@@ -47,6 +48,7 @@
     while (cmdSvrClient && cmdSvrClient.connected() && cmdSvrClient.available() > 0) {
       // still active? push back disconnect
       if (persist) clientEndTimeMs = millis() + clientTimeoutMs;
+      wifiManager.notifyAccessPointUse();
 
       // get the data
       int c = cmdSvrClient.read();

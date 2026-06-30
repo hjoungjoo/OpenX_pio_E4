@@ -25,6 +25,13 @@
 
 #define STA_AP_FALLBACK               true                        // activate SoftAP if station fails to connect
 #define STA_AUTO_RECONNECT            true                        // automatically reconnect if connection is dropped
+#define STA_CONNECT_BOOT_DELAY_MS     10000UL                     // wait after boot before the first station connect attempt
+#define STA_CONNECT_RETRY_INTERVAL_MS 10000UL                     // wait between station connect retries
+#define STA_CONNECT_RETRY_COUNT       2                           // retry station connect this many times before AP fallback
+#define STA_CONNECT_TIMEOUT_MS        30000UL                     // wait for station association/DHCP per attempt
+#define STA_CONNECT_SETTLE_MS         1500UL                      // settle WiFi after scan/disconnect before station connect
+#define STA_CONNECT_DIAGNOSTICS       true                        // log station scan and disconnect reason while troubleshooting
+#define WIFI_COUNTRY_CODE             "KR"                        // two-letter WiFi country code, "" disables explicit country setup
 #define STA_SSID                      "MfFinderAP"                // Station SSID to connnect to
 #define STA_PASSWORD                  "password"                  // Wifi Station mode password
 #define STA_DHCP_ENABLED              true                       // Wifi Station/Ethernet DHCP enabled

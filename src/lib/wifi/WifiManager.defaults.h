@@ -96,6 +96,34 @@
 #define STA_AUTO_RECONNECT          false // normally not enabled
 #endif
 
+#ifndef STA_CONNECT_BOOT_DELAY_MS
+#define STA_CONNECT_BOOT_DELAY_MS       0UL // wait after boot before the first station connect attempt
+#endif
+
+#ifndef STA_CONNECT_RETRY_INTERVAL_MS
+#define STA_CONNECT_RETRY_INTERVAL_MS 10000UL // wait between station connect retries
+#endif
+
+#ifndef STA_CONNECT_RETRY_COUNT
+#define STA_CONNECT_RETRY_COUNT          0 // retry station connect this many times before AP fallback
+#endif
+
+#ifndef STA_CONNECT_TIMEOUT_MS
+#define STA_CONNECT_TIMEOUT_MS       15000UL // wait for station association/DHCP per attempt
+#endif
+
+#ifndef STA_CONNECT_SETTLE_MS
+#define STA_CONNECT_SETTLE_MS          250UL // settle WiFi after scan/disconnect before station connect
+#endif
+
+#ifndef STA_CONNECT_DIAGNOSTICS
+#define STA_CONNECT_DIAGNOSTICS       false // log station scan and disconnect reason
+#endif
+
+#ifndef WIFI_COUNTRY_CODE
+#define WIFI_COUNTRY_CODE                "" // optional two-letter regulatory country code, for example "KR"; "" disables
+#endif
+
 #ifndef WIFI_HIGH_PERFORMANCE
 #define WIFI_HIGH_PERFORMANCE         OFF // ON disables WiFi sleep for lower latency
 #endif
