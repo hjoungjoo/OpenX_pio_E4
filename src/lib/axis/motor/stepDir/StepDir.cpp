@@ -231,7 +231,6 @@ void StepDirMotor::setFrequencySteps(float frequency) {
 
   if (!inBacklash) modeSwitch();
 
-  const float requestedFrequency = frequency;
   Y;
   // negative frequency, convert to positive and reverse the direction
   int dir = 0;
@@ -267,7 +266,6 @@ void StepDirMotor::setFrequencySteps(float frequency) {
       #if STEP_WAVE_FORM == PULSE || STEP_WAVE_FORM == DEDGE
         minPeriod /= 1.6F;
       #endif
-      bool clamped = false;
       if (period < minPeriod) {
         period = minPeriod;
         #if STEP_WAVE_FORM == SQUARE
@@ -275,21 +273,9 @@ void StepDirMotor::setFrequencySteps(float frequency) {
         #else
           frequency = 1000000.0F/minPeriod;
         #endif
-        clamped = true;
       }
       period *= 16.0F;
       lastPeriod = (unsigned long)lroundf(period);
-      #if DEBUG != OFF
-        static uint8_t logCount[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-        if (axisNumber <= 9 && logCount[axisNumber - 1] < 8 && (requestedFrequency != 0.0F || clamped)) {
-          DF("DBG: StepDir axis="); D(axisNumber);
-          DF(" reqHz="); D(requestedFrequency);
-          DF(" effHz="); D(frequency);
-          DF(" periodSubUs="); D(lastPeriod);
-          DF(" clamp="); DL(clamped);
-          logCount[axisNumber - 1]++;
-        }
-      #endif
     } else {
       lastPeriod = 0;
       frequency = 0.0F;

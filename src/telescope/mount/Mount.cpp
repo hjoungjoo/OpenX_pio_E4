@@ -516,20 +516,21 @@ void Mount::poll() {
 
   // get positions 1 (or 30) arc-min ahead and behind the current
   updatePosition(CR_MOUNT_ALL);
-  double altitude = current.a;
-  double declination = current.d;
-  double altitude2 = current.aa2;
+  Coordinate trackingCurrent = current;
+  double altitude = trackingCurrent.a;
+  double declination = trackingCurrent.d;
+  double altitude2 = trackingCurrent.aa2;
 
   // on fast processors calculate true coordinate for a little more accuracy
   #ifndef HAL_SLOW_PROCESSOR
-    transform.mountToTopocentric(&current);
-    if (transform.mountType == ALTAZM) transform.horToEqu(&current); else
-    if (transform.mountType == ALTALT) transform.aaToEqu(&current);
+    transform.mountToTopocentric(&trackingCurrent);
+    if (transform.mountType == ALTAZM) transform.horToEqu(&trackingCurrent); else
+    if (transform.mountType == ALTALT) transform.aaToEqu(&trackingCurrent);
   #endif
 
   Y;
-  Coordinate ahead = current;
-  Coordinate behind = current;
+  Coordinate ahead = trackingCurrent;
+  Coordinate behind = trackingCurrent;
   double trackingRange = DiffRange*trackingRate;
   ahead.h += trackingRange;
   behind.h -= trackingRange;
@@ -598,13 +599,15 @@ void Mount::poll() {
   if (behindAxis1 < -Deg90 && aheadAxis1 > Deg90) behindAxis1 += Deg360;
   float rate1 = (aheadAxis1 - behindAxis1)/DiffRange2;
   if (isnan(rate1) || isinf(rate1)) rate1 = 0.0F;
-  if (fabs(trackingRateAxis1 - rate1) <= 0.005F) trackingRateAxis1 = (trackingRateAxis1*9.0F + rate1)/10.0F; else trackingRateAxis1 = rate1;
+  bool smoothAxis1 = fabs(trackingRateAxis1 - rate1) <= 0.005F;
+  if (smoothAxis1) trackingRateAxis1 = (trackingRateAxis1*9.0F + rate1)/10.0F; else trackingRateAxis1 = rate1;
 
   // calculate the Axis2 Dec/Alt tracking rate
   float rate2 = (aheadAxis2 - behindAxis2)/DiffRange2;
   if (isnan(rate2) || isinf(rate2)) rate2 = 0.0F;
-  if (current.pierSide == PIER_SIDE_WEST) rate2 = -rate2;
-  if (fabs(trackingRateAxis2 - rate2) <= 0.005F) trackingRateAxis2 = (trackingRateAxis2*9.0F + rate2)/10.0F; else trackingRateAxis2 = rate2;
+  if (trackingCurrent.pierSide == PIER_SIDE_WEST) rate2 = -rate2;
+  bool smoothAxis2 = fabs(trackingRateAxis2 - rate2) <= 0.005F;
+  if (smoothAxis2) trackingRateAxis2 = (trackingRateAxis2*9.0F + rate2)/10.0F; else trackingRateAxis2 = rate2;
 
   // override for special case of near a celestial pole
   if (fabs(declination) > Deg90 - DegenerateRange) {
@@ -623,7 +626,9 @@ void Mount::poll() {
   }
 
   // override for both rates for special case near the aa1 axis of rotation
-  if (transform.mountType == ALTALT && fabs(altitude2) > Deg90 - DegenerateRange) { trackingRateAxis1 = 0.0F; }
+  if (transform.mountType == ALTALT && fabs(altitude2) > Deg90 - DegenerateRange) {
+    trackingRateAxis1 = 0.0F;
+  }
 
   trackingRateAxis1 = limitTrackingRate(trackingRateAxis1, 1);
   trackingRateAxis2 = limitTrackingRate(trackingRateAxis2, 2);
