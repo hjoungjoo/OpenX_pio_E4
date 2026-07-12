@@ -14,6 +14,8 @@
   void reconnectStationWrapper() { wifiManager.reconnectStation(); }
 #endif
 
+void pollStationWrapper() { wifiManager.pollStation(); }
+
 #if defined(ESP32)
   static uint8_t lastStationDisconnectReason = 0;
   static bool wifiEventDiagnosticsRegistered = false;
@@ -108,15 +110,23 @@ void WifiManager::clearStationScanTarget() {
   memset(stationScanBssid, 0, sizeof(stationScanBssid));
 }
 
+// blocking variant used by the reconnect monitor task
 void WifiManager::beginStationConnection() {
-  IPAddress sta_ip = IPAddress(sta->ip);
-  IPAddress sta_gw = IPAddress(sta->gw);
-  IPAddress sta_sn = IPAddress(sta->sn);
-
-  WiFi.disconnect(false, false);
+  prepareStationConnection();
   #if STA_CONNECT_SETTLE_MS > 0
     delay(STA_CONNECT_SETTLE_MS);
   #endif
+  startStationConnection();
+}
+
+void WifiManager::prepareStationConnection() {
+  WiFi.disconnect(false, false);
+}
+
+void WifiManager::startStationConnection() {
+  IPAddress sta_ip = IPAddress(sta->ip);
+  IPAddress sta_gw = IPAddress(sta->gw);
+  IPAddress sta_sn = IPAddress(sta->sn);
 
   if (!sta->dhcpEnabled) WiFi.config(sta_ip, sta_gw, sta_sn);
   WiFi.setAutoReconnect(false);
@@ -135,12 +145,22 @@ void WifiManager::beginStationConnection() {
   }
 }
 
-void WifiManager::logStationScanResult() {
+// starts an async scan for the station SSID, or skips ahead if diagnostics are off
+void WifiManager::startStationScan() {
   clearStationScanTarget();
 
   #if defined(ESP32) && STA_CONNECT_DIAGNOSTICS == true
     VF("MSG: WiFi, scan Station SSID "); VL(sta->ssid);
-    int16_t scanCount = WiFi.scanNetworks(false, false, false, 150, 0, sta->ssid);
+    WiFi.scanNetworks(true, false, false, 150, 0, sta->ssid);
+    stationStateMs = millis() + 15000UL; // scan guard timeout
+    stationState = WS_SCAN_WAIT;
+  #else
+    stationState = WS_PREPARE;
+  #endif
+}
+
+void WifiManager::processStationScan(int16_t scanCount) {
+  #if defined(ESP32) && STA_CONNECT_DIAGNOSTICS == true
     int32_t bestRssi = -1000;
 
     if (scanCount <= 0) {
@@ -168,26 +188,9 @@ void WifiManager::logStationScanResult() {
     }
 
     WiFi.scanDelete();
+  #else
+    (void)scanCount;
   #endif
-}
-
-bool WifiManager::waitStationConnection(uint32_t timeoutMs) {
-  unsigned long connectTimeoutMs = millis() + timeoutMs;
-  while ((long)(connectTimeoutMs - millis()) >= 0) {
-    IPAddress ip = WiFi.localIP();
-    if (WiFi.status() == WL_CONNECTED && validip4(ip)) {
-      updateStationAddress();
-      VF("MSG: WiFi, Station IP "); VL(ip.toString().c_str());
-      return true;
-    }
-    delay(500);
-  }
-  #if defined(ESP32) && STA_CONNECT_DIAGNOSTICS == true
-    VF("WRN: WiFi, Station timeout status="); V((int)WiFi.status());
-    VF(" reason="); V(lastStationDisconnectReason);
-    VF(" "); VL(WiFi.disconnectReasonName((wifi_err_reason_t)lastStationDisconnectReason));
-  #endif
-  return false;
 }
 
 bool WifiManager::init() {
@@ -206,10 +209,6 @@ bool WifiManager::init() {
       stationReconnectAfterMs = 0;
     #endif
 
-    IPAddress ap_ip = IPAddress(settings.ap.ip);
-    IPAddress ap_gw = IPAddress(settings.ap.gw);
-    IPAddress ap_sn = IPAddress(settings.ap.sn);
-
     char name[32] = HOST_NAME;
     strtohostname(name);
 
@@ -222,171 +221,204 @@ bool WifiManager::init() {
       settings.accessPointEnabled = true;
     }
 
-    bool apStarted = false;
-
-  TryAgain:
-    apStarted = false;
-
-    if (settings.accessPointEnabled && !settings.stationEnabled) {
-      VF("MSG: WiFi, starting Soft AP for SSID "); V(settings.ap.ssid); V(" PWD "); V(settings.ap.pwd); V(" CH "); VL(settings.ap.channel);
-      WiFi.mode(WIFI_AP);
-      delay(100);
-      applyWifiCountryCode();
-      applyWifiPerformanceMode();
-      WiFi.softAPConfig(ap_ip, ap_gw, ap_sn);
-      #if defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32C3)
-        WiFi.setTxPower(WIFI_POWER_8_5dBm);
-      #endif
-      apStarted = WiFi.softAP(settings.ap.ssid, settings.ap.pwd, settings.ap.channel);
-      if (apStarted) {
-        IPAddress ip = WiFi.softAPIP();
-        VF("MSG: WiFi, SoftAP IP "); VL(ip.toString().c_str());
-      } else {
-        DLF("WRN: WiFi, starting SoftAP failed");
-      }
-    } else
-    if (!settings.accessPointEnabled && settings.stationEnabled) {
-      VF("MSG: WiFi, starting Station for SSID "); V(sta->ssid); V(" PWD "); VL(staPwd->password);
-      WiFi.mode(WIFI_STA);
-      delay(100);
-      applyWifiCountryCode();
-      applyWifiPerformanceMode();
-      #if defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32C3)
-        WiFi.setTxPower(WIFI_POWER_8_5dBm);
-      #endif
-      #if STA_CONNECT_BOOT_DELAY_MS > 0
-        VF("MSG: WiFi, waiting before Station connect "); V(STA_CONNECT_BOOT_DELAY_MS / 1000UL); VLF("s");
-        delay(STA_CONNECT_BOOT_DELAY_MS);
-      #endif
-      logStationScanResult();
-      beginStationConnection();
-    } else
-    if (settings.accessPointEnabled && settings.stationEnabled) {
-      VF("MSG: WiFi, starting Soft AP for SSID "); V(settings.ap.ssid); V(" PWD "); V(settings.ap.pwd); V(" CH "); VL(settings.ap.channel);
-      VF("MSG: WiFi, starting Station for SSID "); V(sta->ssid); V(" PWD "); VL(staPwd->password);
-      WiFi.mode(WIFI_AP_STA);
-      delay(100);
-      applyWifiCountryCode();
-      applyWifiPerformanceMode();
-      WiFi.softAPConfig(ap_ip, ap_gw, ap_sn);
-      #if defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32C3)
-        WiFi.setTxPower(WIFI_POWER_8_5dBm);
-      #endif
-      apStarted = WiFi.softAP(settings.ap.ssid, settings.ap.pwd, settings.ap.channel);
-      if (apStarted) {
-        IPAddress ip = WiFi.softAPIP();
-        VF("MSG: WiFi, SoftAP IP "); VL(ip.toString().c_str());
-      } else {
-        DLF("WRN: WiFi, starting SoftAP failed");
-      }
-      #if STA_CONNECT_BOOT_DELAY_MS > 0
-        VF("MSG: WiFi, waiting before Station connect "); V(STA_CONNECT_BOOT_DELAY_MS / 1000UL); VLF("s");
-        delay(STA_CONNECT_BOOT_DELAY_MS);
-      #endif
-      logStationScanResult();
-      beginStationConnection();
-    }
-
+    // set the radio mode and bring the AP (if enabled) up right away, the
+    // station association runs from a background task so booting isn't stalled
+    if (settings.accessPointEnabled && settings.stationEnabled) WiFi.mode(WIFI_AP_STA); else
+    if (settings.accessPointEnabled) WiFi.mode(WIFI_AP); else WiFi.mode(WIFI_STA);
     delay(100);
-
-    // wait for connection
-    bool stationConnected = false;
-    if (settings.stationEnabled) {
-      for (uint8_t attempt = 0; attempt <= STA_CONNECT_RETRY_COUNT; attempt++) {
-        if (attempt > 0) {
-          VF("MSG: WiFi, retry Station connect "); V(attempt); VF("/"); VL(STA_CONNECT_RETRY_COUNT);
-          WiFi.disconnect();
-          if (STA_CONNECT_RETRY_INTERVAL_MS > 0) delay(STA_CONNECT_RETRY_INTERVAL_MS);
-          beginStationConnection();
-        }
-
-        stationConnected = waitStationConnection(STA_CONNECT_TIMEOUT_MS);
-        if (stationConnected) break;
-      }
-    }
-
-    #if STA_AUTO_RECONNECT == true
-      stationInitialConnectComplete = true;
+    applyWifiCountryCode();
+    applyWifiPerformanceMode();
+    #if defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32C3)
+      WiFi.setTxPower(WIFI_POWER_8_5dBm);
     #endif
 
-    if (settings.stationEnabled && !stationConnected) {
+    if (settings.accessPointEnabled) startAccessPoint();
 
-      // if connection fails fall back to access-point + station mode
-      if (settings.stationApFallback && !settings.accessPointEnabled) {
-        VF("MSG: WiFi, starting station failed status="); VL((int)WiFi.status());
-        WiFi.disconnect();
-        #if defined(ESP32)
-          WiFi.mode(WIFI_OFF);
-        #endif
-        delay(1000);
-        VLF("MSG: WiFi, switching to SoftAP+Station mode");
-        settings.accessPointEnabled = true;
-        goto TryAgain;
-      }
-
-      // no fallback but the AP is still enabled
-      if (settings.accessPointEnabled) {
-        active = true;
-        VF("MSG: WiFi, started AP but station failed status="); VL((int)WiFi.status());
-      } else {
-        // the station failed to connect and the AP isn't enabled
-        DF("WRN: WiFi, starting station failed status="); DL((int)WiFi.status());
-        WiFi.disconnect();
-      }
+    if (settings.stationEnabled) {
+      VF("MSG: WiFi, starting Station for SSID "); V(sta->ssid); V(" PWD "); VL(staPwd->password);
+      stationAttempt = 0;
+      stationFallbackDone = settings.accessPointEnabled || !settings.stationApFallback;
+      #if STA_CONNECT_BOOT_DELAY_MS > 0
+        VF("MSG: WiFi, waiting before Station connect "); V(STA_CONNECT_BOOT_DELAY_MS / 1000UL); VLF("s");
+        stationStateMs = millis() + STA_CONNECT_BOOT_DELAY_MS;
+      #else
+        stationStateMs = millis();
+      #endif
+      stationState = WS_BOOT_DELAY;
+      VF("MSG: WiFi, start Station connect task (rate 100ms priority 7)... ");
+      stationConnectHandle = tasks.add(100, 0, true, 7, pollStationWrapper, "WifiSta");
+      if (stationConnectHandle) { VLF("success"); } else { VLF("FAILED!"); stationState = WS_IDLE; }
     } else {
-      active = true;
-      VLF("MSG: WiFi, started");
-    }
-
-    if (active) {
-      #if MDNS_SERVER == ON && !defined(ESP8266)
-        sstrcpy(name, MDNS_NAME);
-        strtohostname2(name);
-        if (MDNS.begin(name)) { VF("MSG: WiFi, mDNS started for "); VL(name); } else { DF("WRN: WiFi, mDNS start FAILED for "); DL(name); }
-      #endif
-
-      if (stationConnected && staNameLookup && strlen(wifiManager.sta->host) > 0) {
-        IPAddress ip;
-        bool resolved = false;
-        char name[32] = "";
-        sstrcpy(name, wifiManager.sta->host);
-        strtohostname(name);
-
-        if (WiFi.hostByName(name, ip) && validip4(ip)) {
-          VF("MSG: WiFi, host name "); V(name); VF(" DNS resolved to "); VL(ip.toString().c_str());
-          ip4toip4(wifiManager.sta->target, ip);
-          resolved = true;
-        } else {
-          VF("MSG: WiFi, host name "); V(name); VLF(" DNS resolution failed!");
-          #if MDNS_CLIENT == ON && !defined(ESP8266)
-            strtohostname2(name);
-            ip = MDNS.queryHost(name);
-            if (validip4(ip)) {
-              ip4toip4(wifiManager.sta->target, ip);
-              VF("MSG: WiFi, host name "); V(name); VF(" mDNS resolved to "); VL(ip.toString().c_str());
-              resolved = true;
-            } else {
-              VF("MSG: WiFi, host name "); V(name); VLF(" mDNS resolution failed!");
-            }
-          #endif
-        }
-
-        if (!resolved && !validip4(wifiManager.sta->target) && validip4(wifiManager.sta->gw)) {
-          ip4toip4(wifiManager.sta->target, wifiManager.sta->gw);
-          VF("MSG: WiFi, using gateway as target "); VL(IPAddress(wifiManager.sta->target).toString().c_str());
-        }
-      }
-
       #if STA_AUTO_RECONNECT == true
-        if (settings.stationEnabled) {
-          VF("MSG: WiFi, start connection check task (rate 8s priority 7)... ");
-          if (tasks.add(8000, 0, true, 7, reconnectStationWrapper, "WifiChk")) { VLF("success"); } else { VLF("FAILED!"); }
-        }
+        stationInitialConnectComplete = true;
       #endif
     }
+
+    active = true;
+    VLF("MSG: WiFi, started");
+
+    #if MDNS_SERVER == ON && !defined(ESP8266)
+      sstrcpy(name, MDNS_NAME);
+      strtohostname2(name);
+      if (MDNS.begin(name)) { VF("MSG: WiFi, mDNS started for "); VL(name); } else { DF("WRN: WiFi, mDNS start FAILED for "); DL(name); }
+    #endif
   }
 
   return active;
+}
+
+bool WifiManager::startAccessPoint() {
+  IPAddress ap_ip = IPAddress(settings.ap.ip);
+  IPAddress ap_gw = IPAddress(settings.ap.gw);
+  IPAddress ap_sn = IPAddress(settings.ap.sn);
+
+  VF("MSG: WiFi, starting Soft AP for SSID "); V(settings.ap.ssid); V(" PWD "); V(settings.ap.pwd); V(" CH "); VL(settings.ap.channel);
+  WiFi.softAPConfig(ap_ip, ap_gw, ap_sn);
+  bool apStarted = WiFi.softAP(settings.ap.ssid, settings.ap.pwd, settings.ap.channel);
+  if (apStarted) {
+    IPAddress ip = WiFi.softAPIP();
+    VF("MSG: WiFi, SoftAP IP "); VL(ip.toString().c_str());
+  } else {
+    DLF("WRN: WiFi, starting SoftAP failed");
+  }
+  return apStarted;
+}
+
+// non-blocking station connect state machine, called from the WifiSta task
+void WifiManager::pollStation() {
+  switch (stationState) {
+    case WS_BOOT_DELAY:
+      if ((long)(millis() - stationStateMs) < 0) return;
+      startStationScan();
+    return;
+
+    case WS_SCAN_WAIT: {
+      #if defined(ESP32) && STA_CONNECT_DIAGNOSTICS == true
+        int16_t scanCount = WiFi.scanComplete();
+        if (scanCount == WIFI_SCAN_RUNNING) {
+          if ((long)(millis() - stationStateMs) < 0) return;
+          DLF("WRN: WiFi, station scan timed out");
+        } else processStationScan(scanCount);
+      #endif
+      stationState = WS_PREPARE;
+    } return;
+
+    case WS_PREPARE:
+      prepareStationConnection();
+      stationStateMs = millis() + STA_CONNECT_SETTLE_MS;
+      stationState = WS_CONNECT_START;
+    return;
+
+    case WS_CONNECT_START:
+      if ((long)(millis() - stationStateMs) < 0) return;
+      startStationConnection();
+      stationStateMs = millis() + STA_CONNECT_TIMEOUT_MS;
+      stationState = WS_CONNECT_WAIT;
+    return;
+
+    case WS_CONNECT_WAIT: {
+      IPAddress ip = WiFi.localIP();
+      if (WiFi.status() == WL_CONNECTED && validip4(ip)) { finishStationConnect(true); return; }
+      if ((long)(millis() - stationStateMs) < 0) return;
+
+      #if defined(ESP32) && STA_CONNECT_DIAGNOSTICS == true
+        VF("WRN: WiFi, Station timeout status="); V((int)WiFi.status());
+        VF(" reason="); V(lastStationDisconnectReason);
+        VF(" "); VL(WiFi.disconnectReasonName((wifi_err_reason_t)lastStationDisconnectReason));
+      #endif
+
+      if (stationAttempt < STA_CONNECT_RETRY_COUNT) {
+        stationAttempt++;
+        VF("MSG: WiFi, retry Station connect "); V(stationAttempt); VF("/"); VL(STA_CONNECT_RETRY_COUNT);
+        WiFi.disconnect();
+        stationStateMs = millis() + STA_CONNECT_RETRY_INTERVAL_MS;
+        stationState = WS_RETRY_WAIT;
+      } else finishStationConnect(false);
+    } return;
+
+    case WS_RETRY_WAIT:
+      if ((long)(millis() - stationStateMs) < 0) return;
+      stationState = WS_PREPARE;
+    return;
+
+    default: return;
+  }
+}
+
+// wrap up the initial station connect flow, on failure optionally
+// fall back to access-point + station mode and try one more round
+void WifiManager::finishStationConnect(bool connected) {
+  if (connected) {
+    updateStationAddress();
+    VF("MSG: WiFi, Station IP "); VL(WiFi.localIP().toString().c_str());
+    resolveStationTarget();
+  } else {
+    if (!stationFallbackDone) {
+      VF("MSG: WiFi, starting station failed status="); VL((int)WiFi.status());
+      VLF("MSG: WiFi, switching to SoftAP+Station mode");
+      stationFallbackDone = true;
+      settings.accessPointEnabled = true;
+      WiFi.disconnect();
+      WiFi.mode(WIFI_AP_STA);
+      delay(100);
+      startAccessPoint();
+      stationAttempt = 0;
+      startStationScan();
+      return; // keep the connect task running for another round
+    }
+
+    if (settings.accessPointEnabled) {
+      VF("MSG: WiFi, started AP but station failed status="); VL((int)WiFi.status());
+    } else {
+      DF("WRN: WiFi, starting station failed status="); DL((int)WiFi.status());
+      WiFi.disconnect();
+    }
+  }
+
+  stationState = WS_IDLE;
+
+  #if STA_AUTO_RECONNECT == true
+    stationInitialConnectComplete = true;
+    VF("MSG: WiFi, start connection check task (rate 8s priority 7)... ");
+    if (tasks.add(8000, 0, true, 7, reconnectStationWrapper, "WifiChk")) { VLF("success"); } else { VLF("FAILED!"); }
+  #endif
+
+  if (stationConnectHandle) { tasks.setDurationComplete(stationConnectHandle); stationConnectHandle = 0; }
+}
+
+// optional station host name lookup to set the target IP
+void WifiManager::resolveStationTarget() {
+  if (!staNameLookup || strlen(sta->host) == 0) return;
+
+  IPAddress ip;
+  bool resolved = false;
+  char name[32] = "";
+  sstrcpy(name, sta->host);
+  strtohostname(name);
+
+  if (WiFi.hostByName(name, ip) && validip4(ip)) {
+    VF("MSG: WiFi, host name "); V(name); VF(" DNS resolved to "); VL(ip.toString().c_str());
+    ip4toip4(sta->target, ip);
+    resolved = true;
+  } else {
+    VF("MSG: WiFi, host name "); V(name); VLF(" DNS resolution failed!");
+    #if MDNS_CLIENT == ON && !defined(ESP8266)
+      strtohostname2(name);
+      ip = MDNS.queryHost(name);
+      if (validip4(ip)) {
+        ip4toip4(sta->target, ip);
+        VF("MSG: WiFi, host name "); V(name); VF(" mDNS resolved to "); VL(ip.toString().c_str());
+        resolved = true;
+      } else {
+        VF("MSG: WiFi, host name "); V(name); VLF(" mDNS resolution failed!");
+      }
+    #endif
+  }
+
+  if (!resolved && !validip4(sta->target) && validip4(sta->gw)) {
+    ip4toip4(sta->target, sta->gw);
+    VF("MSG: WiFi, using gateway as target "); VL(IPAddress(sta->target).toString().c_str());
+  }
 }
 
 #if STA_AUTO_RECONNECT == true
@@ -456,6 +488,8 @@ void WifiManager::setStation(int number) {
 }
 
 void WifiManager::disconnect() {
+  if (stationConnectHandle) { tasks.remove(stationConnectHandle); stationConnectHandle = 0; }
+  stationState = WS_IDLE;
   WiFi.disconnect();
   WiFi.softAPdisconnect(true);
   #if STA_AUTO_RECONNECT == true

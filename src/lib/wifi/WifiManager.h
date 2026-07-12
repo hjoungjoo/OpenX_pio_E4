@@ -73,7 +73,8 @@ typedef struct WifiSettings {
 
 class WifiManager {
   public:
-    // starts WiFi
+    // starts WiFi; the AP (if enabled) comes up immediately, the station
+    // association runs from a background task so booting isn't stalled
     bool init();
 
     // stops WiFi
@@ -81,6 +82,9 @@ class WifiManager {
 
     // suppress station reconnect once the access point is being used for control
     void notifyAccessPointUse();
+
+    // non-blocking station connect state machine, called from a background task
+    void pollStation();
 
     #if STA_AUTO_RECONNECT == true
       void reconnectStation();
@@ -127,11 +131,24 @@ class WifiManager {
   private:
     bool settingsReady = false;
 
+    bool startAccessPoint();
     void beginStationConnection();
-    bool waitStationConnection(uint32_t timeoutMs);
+    void prepareStationConnection();
+    void startStationConnection();
+    void startStationScan();
+    void processStationScan(int16_t scanCount);
+    void finishStationConnect(bool connected);
+    void resolveStationTarget();
     void updateStationAddress();
     void clearStationScanTarget();
-    void logStationScanResult();
+
+    // station connect state machine
+    enum StationConnectState: uint8_t {WS_IDLE, WS_BOOT_DELAY, WS_SCAN_WAIT, WS_PREPARE, WS_CONNECT_START, WS_CONNECT_WAIT, WS_RETRY_WAIT};
+    StationConnectState stationState = WS_IDLE;
+    unsigned long stationStateMs = 0;
+    uint8_t stationAttempt = 0;
+    bool stationFallbackDone = false;
+    uint8_t stationConnectHandle = 0;
 
     bool stationScanBssidValid = false;
     int32_t stationScanChannel = 0;
