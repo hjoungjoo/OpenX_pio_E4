@@ -35,8 +35,12 @@ class SerialST4Master : public Stream {
 
     // call periodically to move data to/from buffers across the SerialST4 interface
     // recvd chars between 0 and 32 are returned directly and bypass the buffer
-    // 24 calls moves one byte of data in both directions so 100us/call results in a data rate of about 4200 bps (350 cps) 
+    // 24 calls moves one byte of data in both directions so 100us/call results in a data rate of about 4200 bps (350 cps)
     char poll();
+
+    // true if no frame/parity error was seen within the last quietMs milliseconds
+    // used to reject possibly noise-induced control bytes right after a link error
+    inline bool linkStable(unsigned long quietMs) { return (long)(millis() - lastErrorMs) > (long)quietMs; }
 
     virtual size_t write(uint8_t);
     virtual size_t write(const uint8_t *, size_t);
@@ -62,6 +66,7 @@ class SerialST4Master : public Stream {
     bool frame_error = false;
     bool send_error = false;
     bool recv_error = false;
+    unsigned long lastErrorMs = 0;
     uint8_t recv_head = 0;
     uint32_t timeout = 80;
 };

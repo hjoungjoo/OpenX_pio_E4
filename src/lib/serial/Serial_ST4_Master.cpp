@@ -72,6 +72,7 @@ bool SerialST4Master::trans(char *data_in) {
       if (digitalReadF(ST4_DATA_IN_PIN) != LOW) {
         DLF("WRN: SerialST4.poll(), frame/start error");
         frame_error = true;
+        lastErrorMs = millis();
         resetFinishTime = millis() + 1000;
         reset = true;
         return false;
@@ -115,6 +116,7 @@ bool SerialST4Master::trans(char *data_in) {
 
       if (frame_error) {
         DLF("WRN: SerialST4.poll(), frame/stop error");
+        lastErrorMs = millis();
         resetFinishTime = millis() + ST4_MAX_BIT_TIME/1000 + 1;
         reset = true;
         return false;
@@ -127,8 +129,8 @@ bool SerialST4Master::trans(char *data_in) {
 
       *data_in = this_data_in;
 
-      if (send_error) { DLF("WRN: SerialST4.poll(), send parity error"); }
-      if (recv_error) { DLF("WRN: SerialST4.poll(), recv parity error"); }
+      if (send_error) { DLF("WRN: SerialST4.poll(), send parity error"); lastErrorMs = millis(); }
+      if (recv_error) { DLF("WRN: SerialST4.poll(), recv parity error"); lastErrorMs = millis(); }
 
       index = 18;
       return true;

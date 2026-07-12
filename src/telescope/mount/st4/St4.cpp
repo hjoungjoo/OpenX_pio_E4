@@ -301,6 +301,17 @@
   void St4::pollSerial() {
     char c = serialST4.poll();
 
+    // reject guide start commands right after a link frame/parity error, they may be noise induced
+    // guide stop commands are always accepted since stopping is the fail-safe action
+    #ifndef ST4_SHC_LINK_QUIET_MS
+      #define ST4_SHC_LINK_QUIET_MS 500UL
+    #endif
+    bool linkStable = serialST4.linkStable(ST4_SHC_LINK_QUIET_MS);
+    if (!linkStable && c >= ccMe && c <= ccMs) {
+      DLF("WRN: St4.pollSerial(), guide start rejected (link error)");
+      return;
+    }
+
     // process any single byte guide commands
     switch (c) {
       case ccMe: guide.startAxis1(GA_REVERSE, guide.settings.axis1RateSelect, GUIDE_TIME_LIMIT*1000); break;
