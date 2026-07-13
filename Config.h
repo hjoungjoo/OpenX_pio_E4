@@ -58,9 +58,10 @@
                                           //         Option to extend the temperature measurement range down to -20C or so
 
 #define LIMIT_SENSE_PIN                OFF //         Override default and move limit sense to the FYSETC E4's TB connector
-//#define SERIAL_TMC_RX                  35 //         Override default TMC2209 RX pin move to Z-MIN (enable _DRIVER_STATUS to use)
+#define SERIAL_TMC_RX                  35 //         Override default TMC2209 RX pin move to Z-MIN (enable _DRIVER_STATUS to use)
 #define PEC_SENSE_PIN                  OFF    // 34 //         Override default and move limit sense to the FYSETC E4's X-MIN connector
-#define SERIAL_TMC_RX_DISABLE        true //         Recieving data often doesn't work with software serial
+#define SERIAL_TMC_RX_DISABLE       false //         RX wired to GPIO35 (Z-MIN), UART read-back enabled
+#define MOTOR_DRIVER_DETECT               //         Verify TMC2209 UART comms at boot (logs error if a driver doesn't respond)
 
 #define DISPLAY_WEATHER                ON //         Website, display weather
 #define DISPLAY_INTERNAL_TEMPERATURE   ON //         Website, display internal MCU temperature
@@ -116,7 +117,7 @@
 
 // If runtime axis settings are enabled changes in the section below will be ignored (disable in SWS or by wiping NV/EEPROM):
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ 
-#define AXIS1_STEPS_PER_DEGREE      64000 //  12800, n. Number of steps per degree:                                          <-Req'd
+#define AXIS1_STEPS_PER_DEGREE      32000 //  12800, n. Number of steps per degree:                                          <-Req'd
                                           //         n = (stepper_steps * micro_steps * overall_gear_reduction)/360.0
 #define AXIS1_REVERSE                 ON  //    OFF, ON Reverses movement direction, or reverse wiring instead to correct.   <-Often
 #define AXIS1_LIMIT_MIN              -180 //   -180, n. Where n= -90..-360 (degrees.) Minimum "Hour Angle" or Azimuth.        Adjust
@@ -126,14 +127,14 @@
 #define AXIS1_DRIVER_MICROSTEPS_GOTO    16 //    OFF, n. Microstep mode used during slews. OFF uses _DRIVER_MICROSTEPS.        Option
 
 // for TMC2130, TMC5160, TMC2209, TMC2226 STEP/DIR driver models:
-#define AXIS1_DRIVER_IHOLD           200 //    OFF, n, (mA.) Current during standstill. OFF uses IRUN/2.0                    Option
-#define AXIS1_DRIVER_IRUN            700 //    OFF, n, (mA.) Current during tracking, appropriate for stepper/driver/etc.    Option
-#define AXIS1_DRIVER_IGOTO          1400 //    OFF, n, (mA.) Current during slews. OFF uses IRUN.                            Option
+#define AXIS1_DRIVER_IHOLD          OFF //    OFF, n, (mA.) Current during standstill. OFF uses IRUN/2.0                    Option
+#define AXIS1_DRIVER_IRUN           1000 //    OFF, n, (mA.) Current during tracking, appropriate for stepper/driver/etc.    Option
+#define AXIS1_DRIVER_IGOTO          1500 //    OFF, n, (mA.) Current during slews. OFF uses IRUN.                            Option
 // /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /
 
-#define AXIS1_DRIVER_STATUS           OFF //    OFF, ON, HIGH, or LOW.  For driver status info/fault detection.               Option
+#define AXIS1_DRIVER_STATUS            ON //    OFF, ON, HIGH, or LOW.  For driver status info/fault detection.               Option
 
-#define AXIS1_DRIVER_DECAY            OFF //    OFF, Tracking decay mode default override. TMC default is STEALTHCHOP.        Infreq
+#define AXIS1_DRIVER_DECAY    SPREADCYCLE //    OFF, Tracking decay mode default override. TMC default is STEALTHCHOP.        Infreq
 #define AXIS1_DRIVER_DECAY_GOTO       OFF //    OFF, Decay mode goto default override. TMC default is SPREADCYCLE.            Infreq
 
 #define AXIS1_POWER_DOWN              OFF //    OFF, ON Powers off 30sec after movement stops or 10min after last<=1x guide.  Infreq
@@ -151,7 +152,7 @@
 
 // If runtime axis settings are enabled changes in the section below will be ignored (disable in SWS or by wiping NV/EEPROM):
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
-#define AXIS2_STEPS_PER_DEGREE      64000 //  12800, n. Number of steps per degree:                                          <-Req'd
+#define AXIS2_STEPS_PER_DEGREE      32000 //  12800, n. Number of steps per degree:                                          <-Req'd
                                           //         n = (stepper_steps * micro_steps * overall_gear_reduction)/360.0
 #define AXIS2_REVERSE                 OFF //    OFF, ON Reverses movement direction, or reverse wiring instead to correct.   <-Often
 #define AXIS2_LIMIT_MIN               -90 //    -90, n. Where n=-90..0 (degrees.) Minimum allowed Declination or Altitude.    Infreq
@@ -161,14 +162,14 @@
 #define AXIS2_DRIVER_MICROSTEPS_GOTO    16 //    OFF, n. Microstep mode used during slews. OFF uses _DRIVER_MICROSTEPS.        Option
 
 // for TMC2130, TMC5160, TMC2209, TMC2226 STEP/DIR driver models:
-#define AXIS2_DRIVER_IHOLD            200 //    OFF, n, (mA.) Current during standstill. OFF uses IRUN/2.0                    Option
-#define AXIS2_DRIVER_IRUN             700 //    OFF, n, (mA.) Current during tracking, appropriate for stepper/driver/etc.    Option
-#define AXIS2_DRIVER_IGOTO           1400 //    OFF, n, (mA.) Current during slews. OFF uses IRUN.                            Option
+#define AXIS2_DRIVER_IHOLD           OFF //    OFF, n, (mA.) Current during standstill. OFF uses IRUN/2.0                    Option
+#define AXIS2_DRIVER_IRUN            1000 //    OFF, n, (mA.) Current during tracking, appropriate for stepper/driver/etc.    Option
+#define AXIS2_DRIVER_IGOTO           1500 //    OFF, n, (mA.) Current during slews. OFF uses IRUN.                            Option
 // /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /
 
-#define AXIS2_DRIVER_STATUS           OFF //    OFF, ON, HIGH, or LOW.  Polling for driver status info/fault detection.       Option
+#define AXIS2_DRIVER_STATUS            ON //    OFF, ON, HIGH, or LOW.  Polling for driver status info/fault detection.       Option
 
-#define AXIS2_DRIVER_DECAY            OFF //    OFF, Tracking decay mode default override. TMC default is STEALTHCHOP.        Infreq
+#define AXIS2_DRIVER_DECAY    SPREADCYCLE //    OFF, Tracking decay mode default override. TMC default is STEALTHCHOP.        Infreq
 #define AXIS2_DRIVER_DECAY_GOTO       OFF //    OFF, Decay mode goto default override. TMC default is SPREADCYCLE.            Infreq
 
 #define AXIS2_POWER_DOWN              OFF //    OFF, ON Powers off 30sec after movement stops or 10min after last<=1x guide.  Option
