@@ -27,6 +27,8 @@
       return false;
     }
 
+    delay(1000);
+
     onStep = IPAddress(wifiManager.sta->target);
     VF("MSG: IPSerialClient, target "); V(onStep[0]); V("."); V(onStep[1]); V("."); V(onStep[2]); V("."); V(onStep[3]); V(":"); VL(port);
 

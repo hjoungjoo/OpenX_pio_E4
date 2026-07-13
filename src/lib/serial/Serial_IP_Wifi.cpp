@@ -22,12 +22,15 @@
     }
 
     cmdSvr = new WiFiServer(port);
+    delay(1000);
 
     cmdSvr->begin();
     cmdSvr->setNoDelay(true);
     VF("MSG: IPSerial, started WiFiServer on port "); VL(port);
 
     active = true;
+
+    delay(1000);
   }
 
   void IPSerial::end() {
