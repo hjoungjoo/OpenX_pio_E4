@@ -269,7 +269,7 @@
             if (goTo.isHomePaused()) goTo.homeContinue(); else
             if (goTo.state == GS_GOTO) goTo.abort(); else
           #endif
-          guide.startAxis1(st4GuideActionAxis1, pulseGuiding ? guide.settings.pulseRateSelect : guide.settings.axis1RateSelect, GUIDE_TIME_LIMIT*1000);
+          guide.startAxis1(st4GuideActionAxis1, pulseGuiding ? guide.settings.pulseRateSelect : guide.settings.axis1RateSelect, GUIDE_TIME_LIMIT*1000, pulseGuiding);
         } else guide.stopAxis1();
       }
 
@@ -286,7 +286,7 @@
             if (goTo.isHomePaused()) goTo.homeContinue(); else
             if (goTo.state == GS_GOTO) goTo.abort(); else
           #endif
-          guide.startAxis2(st4GuideActionAxis2, pulseGuiding ? guide.settings.pulseRateSelect : guide.settings.axis2RateSelect, GUIDE_TIME_LIMIT*1000);
+          guide.startAxis2(st4GuideActionAxis2, pulseGuiding ? guide.settings.pulseRateSelect : guide.settings.axis2RateSelect, GUIDE_TIME_LIMIT*1000, pulseGuiding);
         } else guide.stopAxis2();
       }
 
