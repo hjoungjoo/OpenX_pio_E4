@@ -22,5 +22,6 @@ debug.svd
 z.*
 .agents/
 .codex/
+.work_mf_OnStepX/
 *.log
 serial_*.log
