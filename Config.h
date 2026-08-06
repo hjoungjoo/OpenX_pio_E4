@@ -225,11 +225,11 @@
 #define ST4_HAND_CONTROL_FOCUSER       OFF //     ON, ON alternate to above: Focuser move [E]f1 [W]f2 [N]-     [S]+            Option
 
 // GUIDING BEHAVIOUR ------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#GUIDING
-#define GUIDE_TIME_LIMIT              10 //     10, n. Time limit n=0..120 seconds. Use 0 to disable.                        Adjust
+#define GUIDE_TIME_LIMIT              0 //     10, n. Time limit n=0..120 seconds. Use 0 to disable.                        Adjust
 #define GUIDE_DISABLE_BACKLASH        ON //    OFF, Disable backlash takeup during guiding at <= 1X.                         Option
 
 // LIMITS ------------------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#LIMITS
-#define LIMIT_SENSE                   LOW //    OFF, HIGH or LOW state on limit sense switch stops movement.                  Option
+#define LIMIT_SENSE                   OFF //    OFF, HIGH or LOW state on limit sense switch stops movement.                  Option
 #define LIMIT_RECOVERY                OFF //    OFF, disables limits for 1s to allow gotos outside limits for recovery from   Option
                                           //         overhead (Alt/Azm), horizon, meridian (GEM), and axis1 min/max.
 #define LIMIT_RECOVERY_WITH_TRACKING  OFF //    OFF, automatically enable tracking on limit recovery                          Option
