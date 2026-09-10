@@ -3,24 +3,41 @@
 이 문서는 원본 저장소(hjd1964/OnStepX)와의 동기화 상태를 기록하고,
 추후 업스트림 비교/반영 작업 시 참고하는 기준 문서다.
 
-최종 갱신일: 2026-08-07
+최종 갱신일: 2026-09-10
 
 ## 저장소 구조
 
 - 원본(업스트림): https://github.com/hjd1964/OnStepX — 리모트 이름 `upstream`
 - 로컬(오리진): https://github.com/hjoungjoo/OpenX_pio_E4 — 리모트 이름 `origin`
 - 로컬 저장소는 업스트림 스냅샷에서 새로 시작한 **독립 히스토리**다.
-  업스트림과 공통 조상이 없으므로 merge/rebase가 불가능하며,
+  업스트림과 공통 조상이 없으므로 일반적인 공통 조상 기반 merge/rebase 대신,
   업스트림 변경은 **체리픽 또는 수동 반영** 방식으로 따라간다.
 
-## 현재 동기화 상태 (2026-08-07)
+## 현재 동기화 상태 (2026-09-10)
 
 | 항목 | 값 |
 | --- | --- |
-| 로컬 펌웨어 버전 | 10.28w |
-| 업스트림 펌웨어 버전 | 10.28w |
-| 마지막 반영 업스트림 커밋 | `8500ed5` "Upped patch level" (2026-08-06) |
-| 반영 방식 | 실질 변경(`9d755d4` sense offset 수정)을 수동 반영 + 버전 동기화 |
+| 로컬 펌웨어 버전 | 10.28x |
+| 업스트림 펌웨어 버전 | 10.28x |
+| 마지막 반영 업스트림 커밋 | `65a7518` "Upped patch level" (2026-09-08) |
+| 반영 방식 | 추적 정밀도·부저 기본 상태 수정을 수동 반영 + 버전 동기화 |
+
+2026-09-10 반영 내역:
+
+- 기존 작업 변경은 `055d04c`로 커밋해 `origin/main`에 푸시한 후 적용했다.
+- `21c3834` — `Mount::poll()`의 중앙 차분 좌표 4개를 `float`에서 `double`로
+  변경해 차분 이전의 정밀도 손실을 줄였다. 로컬 좌표 스냅샷과 속도 제한은 유지했다.
+- `95eca32` — `Sound.h`, `Status.h`, `Status.cpp`의 부저 기본 상태와
+  저장 설정 적용 순서를 업스트림과 맞췄다.
+- `d487428` — 홈 오프셋 범위 조건의 `||` → `&&` 수정은 로컬에 이미 존재한다.
+  로컬의 `strtol` 입력 전체 검증과 오류 시 NV 저장 방지는 계속 유지한다.
+- `65a7518` — 펌웨어 패치 버전을 `w`에서 `x`로 갱신했다.
+
+검증 (2026-09-10): `pio run -e onstepx_esp32_mf_oozoo_e4` 빌드 성공.
+RAM 63,316 / 327,680 bytes (19.3%), Flash 1,230,889 / 3,145,728 bytes (39.1%).
+`git diff --check` 통과. 실제 장치 업로드 및 추적·부저 동작 검증은 수행하지 않았다.
+
+## 10.28w 반영 내역 (2026-08-07)
 
 업스트림 `9d755d4` "Fix for sense offset range bug" 반영 내역:
 
@@ -30,10 +47,10 @@
   ±0.05 arcsec → ±648,000 arcsec(±180°)로 수정. NV에 저장된 홈 센서 오프셋이
   부팅 때마다 0으로 뭉개지던 버그 해결.
 - `src/telescope/mount/home/Home.command.cpp` — **업스트림 버전을 따르지 않음.**
-  로컬은 `strtol` + 완전한 범위 검증(`&&`)을 쓰는 반면, 업스트림 수정본은
+  로컬은 `strtol` + 완전한 범위 검증(`&&`)을 쓰는 반면, 당시 업스트림 수정본은
   `l >= -degToArcsecL(180L) || l <= degToArcsecL(180L)` 식이라 항상 참이 되는
-  논리 버그가 남아 있다. 로컬 버전이 더 안전하므로 유지한다.
-  추후 diff에서 이 파일이 다르게 나오는 것은 의도된 차이다.
+  논리 버그가 남아 있었다. 업스트림도 이후 `d487428`에서 `&&`로 수정했다.
+  현재 남은 차이는 `strtol` 입력 검증과 오류 시 저장 방지이며 의도된 차이다.
 
 빌드 검증: `onstepx_esp32_mf_oozoo_e4` 환경 컴파일 통과 (RAM 19.3%, Flash 39.1%).
 
@@ -41,8 +58,8 @@
 
 ```powershell
 git fetch upstream
-git log --oneline HEAD..upstream/main      # 업스트림 신규 커밋 확인
-git diff upstream/main HEAD --stat         # 파일 단위 차이 확인
+git log --oneline 65a7518..upstream/main   # 마지막 확인 기준 이후의 신규 커밋
+git diff upstream/main --stat             # 미커밋 변경을 포함한 파일 단위 차이
 git show <hash>                            # 개별 커밋 내용 확인
 ```
 
@@ -91,12 +108,15 @@ git show <hash>                            # 개별 커밋 내용 확인
 | --- | --- | --- | --- |
 | 2026-08-07 | [hjd1964/OnStepX#124](https://github.com/hjd1964/OnStepX/pull/124) | `:hC1,n#`/`:hC2,n#` 홈 오프셋 명령 파싱 수정 — 항상 참인 `\|\|` 범위 검사, `atol` 비숫자 입력 무검증, 실패 시에도 NV 저장되는 문제. 로컬 `Home.command.cpp`의 `strtol` 검증을 업스트림 코드 스타일(`degToArcsecL` 매크로)로 이식. 포크 hjoungjoo/mf_OnStepX의 `fix/home-offset-command-parsing` 브랜치 | 리뷰 대기 |
 
-PR이 머지되면 해당 파일의 "의도된 로컬 차이"가 해소되므로, 다음 동기화 때
-`Home.command.cpp` diff가 사라졌는지 확인하고 위 "반영 내역" 항목을 갱신할 것.
+위 PR 상태는 2026-08-07 당시 기록이며 이번 작업에서는 PR 상태를 조회하지 않았다.
+2026-09-10 소스 비교 결과 업스트림에는 `d487428`의 조건 수정만 확인되며,
+`strtol` 입력 검증과 오류 시 NV 저장 방지는 여전히 로컬에만 존재한다.
+다음 동기화에서도 PR 상태와 별도로 `Home.command.cpp`의 실제 diff를 확인할 것.
 
 ## 동기화 이력
 
 | 날짜 | 업스트림 버전 | 반영 내용 |
 | --- | --- | --- |
+| 2026-09-10 | 10.28x (`65a7518`) | 중앙 차분 좌표 double 유지(`21c3834`), 부저 기본 상태 처리(`95eca32`), 홈 입력 검증은 로컬 유지, 패치 레벨 w→x |
 | 2026-08-07 | 10.28w (`8500ed5`) | sense offset constrain 버그 수정 반영(`Home.cpp`, `Macros.h`), `Home.command.cpp`는 로컬 버전 유지, 패치 레벨 v→w |
 | 2026-08-06 이전 | 10.28v | 커밋 `11959bf`까지 체리픽으로 동기화 (bissc 절대 엔코더, meridian flip homing, GUIDE_TIME_NO_LIMITS, cos() 선형화 수정, AltAzm overhead limit 복구, modem sleep 비활성화 등) |
