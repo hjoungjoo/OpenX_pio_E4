@@ -7,6 +7,11 @@
 // threshold in milliseconds (for tone detection, 40ms/7 = +/-17.5%)
 #define TONE_FREQ_THRESHOLD 7.0
 
+// pulses shorter than this (in ms) are treated as noise glitches and excluded
+// from the average pulse duration; the SHC tone half-period is nominally 40ms
+// and is sampled at ~10ms, so genuine pulses measure 30ms or longer
+#define TONE_GLITCH_FILTER_MS 25
+
 class Button {
   public:
     // create object

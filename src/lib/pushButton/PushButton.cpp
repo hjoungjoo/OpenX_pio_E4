@@ -61,7 +61,10 @@ void Button::poll() {
 
   } else state = digitalReadEx(pin);
   if (lastState != state) {
-    avgPulseDuration = ((avgPulseDuration*49.0) + (double)(millis() - stableStartMs))/50.0;
+    unsigned long pulseMs = millis() - stableStartMs;
+    if (pulseMs >= TONE_GLITCH_FILTER_MS) {
+      avgPulseDuration = ((avgPulseDuration*49.0) + (double)pulseMs)/50.0;
+    }
     stableStartMs = millis();
   }
   stableMs = (long)(millis() - stableStartMs);

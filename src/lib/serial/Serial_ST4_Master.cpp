@@ -18,6 +18,13 @@
 // interval in microseconds for a clock timeout
 #define ST4_MAX_BIT_TIME 10000
 
+// interval in milliseconds to pause comms after a start-bit frame error;
+// must exceed the slave's 100ms bit timeout so it resyncs to frame start,
+// but kept short so repeated EMI errors don't black out the link for long
+#ifndef ST4_START_ERROR_RESYNC_MS
+  #define ST4_START_ERROR_RESYNC_MS 250
+#endif
+
 char SerialST4Master::poll() {
   char c = 0;
   if (trans(&c)) {
@@ -73,7 +80,7 @@ bool SerialST4Master::trans(char *data_in) {
         DLF("WRN: SerialST4.poll(), frame/start error");
         frame_error = true;
         lastErrorMs = millis();
-        resetFinishTime = millis() + 1000;
+        resetFinishTime = millis() + ST4_START_ERROR_RESYNC_MS;
         reset = true;
         return false;
       }
