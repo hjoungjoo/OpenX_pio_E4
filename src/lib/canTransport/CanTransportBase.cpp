@@ -6,7 +6,7 @@
 
 #if defined(CAN_PLUS) && CAN_PLUS != OFF
 
-#include "../CanPlus/CanPlus.h"
+#include "../canPlus/CanPlus.h"
 
 CanTransport* CanTransport::s_instances[TRANSPORT_CAN_MAX_INSTANCES] = {nullptr};
 

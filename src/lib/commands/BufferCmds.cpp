@@ -95,7 +95,10 @@ char* Buffer::getSeq() {
 
 bool Buffer::ready() {
   if (!cbp) return false;
-  if (cb[cbp-1] == '#' && cbp == 1) flush();
+  if (cb[cbp-1] == '#' && cbp == 1) {
+    flush();
+    return false;
+  }
   return (cb[cbp-1] == '#');
 }
 

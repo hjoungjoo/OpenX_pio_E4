@@ -8,6 +8,7 @@
 #include "../../lib/nv/Nv.h"
 
 #include "../convert/Convert.h"
+#include "../commands/CommandValidation.h"
 
 extern AxesRevert revert;
 
@@ -166,12 +167,15 @@ bool Axis::command(char *reply, char *command, char *parameter, bool *suppressFr
 
       // :SXA[n],[p],nnn.n#  Set axis/motor/driver parameter value
       // :SXA[n],[p],nnn.n#  :SXA1,14,12.5#
-      int parameterNumber = atoi(&parameter[3]);
-      char* valueStr = strchr(&parameter[3], ',');
-      if (valueStr == NULL) { *commandError = CE_PARAM_FORM; return true; }
-      char* conv_end;
-      double value = strtod(++valueStr, &conv_end);
-      if (&valueStr[0] == conv_end) { *commandError = CE_PARAM_FORM; return true; }
+      int parameterNumber;
+      const char* valueStr;
+      const auto indexResult = commandValidation::parameterIndex(&parameter[3], getParameterCount(), parameterNumber, valueStr);
+      if (indexResult != commandValidation::IndexResult::Valid) {
+        *commandError = indexResult == commandValidation::IndexResult::OutOfRange ? CE_PARAM_RANGE : CE_PARAM_FORM;
+        return true;
+      }
+      double value;
+      if (!commandValidation::finiteDouble(valueStr, value)) { *commandError = CE_PARAM_FORM; return true; }
 
       // convert to radians if necessary
       if (getParameter(parameterNumber)->type == AXP_FLOAT_RAD) value = degToRad(value);

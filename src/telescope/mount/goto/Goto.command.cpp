@@ -7,6 +7,7 @@
 
 #include "../../../lib/tasks/OnTask.h"
 #include "../../../lib/nv/Nv.h"
+#include "../../../lib/commands/CommandValidation.h"
 
 #include "../site/Site.h"
 #include "../Mount.h"
@@ -493,12 +494,16 @@ bool Goto::command(char *reply, char *command, char *parameter, bool *suppressFr
           // set new slew rate (returns 1 success or 0 failure)
           case '2':
             if (state == GS_NONE && guide.state == GU_NONE) {
-              char *conv_end;
-              settings.usPerStepCurrent = strtod(&parameter[3], &conv_end);
-              if (settings.usPerStepCurrent < usPerStepBase/2.0) settings.usPerStepCurrent = usPerStepBase/2.0;
-              if (settings.usPerStepCurrent > usPerStepBase*2.0) settings.usPerStepCurrent = usPerStepBase*2.0;
-              if (settings.usPerStepCurrent < usPerStepLowerLimit()) settings.usPerStepCurrent = usPerStepLowerLimit();
-              if (GOTO_FEATURE == OFF) settings.usPerStepCurrent = usPerStepBase; // force base rate
+              double requestedRate;
+              if (parameter[2] != ',' || !commandValidation::finiteDouble(&parameter[3], requestedRate)) {
+                *commandError = CE_PARAM_FORM;
+                return true;
+              }
+              if (requestedRate < usPerStepBase/2.0) requestedRate = usPerStepBase/2.0;
+              if (requestedRate > usPerStepBase*2.0) requestedRate = usPerStepBase*2.0;
+              if (requestedRate < usPerStepLowerLimit()) requestedRate = usPerStepLowerLimit();
+              if (GOTO_FEATURE == OFF) requestedRate = usPerStepBase; // force base rate
+              settings.usPerStepCurrent = requestedRate;
               nv().kv().put(nvKey, settings);
               updateAccelerationRates();
             } else *commandError = CE_SLEW_IN_MOTION;
