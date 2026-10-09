@@ -57,3 +57,20 @@ Replace `COM5` with the port shown by PlatformIO or Windows Device Manager.
 Software serial monitoring works over USB. True breakpoints require an ESP32
 JTAG debugger such as ESP-Prog. After wiring the debugger, uncomment the
 `debug_tool` lines in `platformio.ini`.
+
+## Host regression checks
+
+With Python 3 and a host C++17 compiler installed:
+
+```sh
+bash tools/test_commands.sh
+python3 tests/host/tracking_pulse_test.py
+```
+
+The pulse test extracts the current firmware's tracking, guide and coordinate
+functions, substitutes a deterministic clock and hardware stubs, and checks
+240 timing cases across Alt/Az, Alt/Alt and equatorial mounts. It also checks
+overlapping axes, guide changes during a periodic calculation, reversal and
+abort. Both tests enable AddressSanitizer and UndefinedBehaviorSanitizer.
+In a ptrace-based sandbox, use `ASAN_OPTIONS=detect_leaks=0` if LeakSanitizer
+cannot enumerate threads. This does not replace a device output timing test.
