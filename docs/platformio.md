@@ -17,7 +17,7 @@ Current target:
 - `MF_OOZOO_E4` pinmap from `Config.h`
 - `huge_app.csv` partition layout
 - `TMCStepper` library
-- serial monitor at `115200`
+- serial monitor and firmware USB command port at `230400` (10.28z onward)
 - PlatformIO `platformio/espressif32@6.7.0` with Arduino-ESP32 `2.0.16`
 
 `platformio_deps.cpp` exists only to help PlatformIO's Library Dependency Finder
