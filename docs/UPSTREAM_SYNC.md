@@ -33,8 +33,8 @@
   기본 보간 설정 `ON`이 무시되는 문제를 공통 TMC 초기화에서 수정했다.
 - StallGuard 미사용 빌드에서는 초기화되지 않는 SG 활성화 값을 검증 과정에서
   `lround(NAN)`으로 변환하지 않도록 SG 전용 검증을 조건부로 실행한다.
-- `Config.h`의 기존 TMC2209 설정은 유지한다. 두 축 모두 추적은 `SPREADCYCLE`,
-  GoTo는 `OFF`로 지정한 TMC 기본값 `SPREADCYCLE`을 사용한다.
+- `Config.h`의 두 축 추적 decay를 `OFF`로 변경해 TMC 기본값 `STEALTHCHOP`을
+  사용한다. GoTo는 기존 `OFF` 설정의 기본값 `SPREADCYCLE`을 사용한다.
 - 검증: ESP32 `MF_OOZOO_E4` 빌드 성공. 실제 드라이버 소스와 모의 GPIO·UART를
   사용하는 호스트 시험에서 세 결함의 수정 전 실패와 수정 후 통과를 확인했다.
   decay 전환, 런타임 값 우선 적용, 보간 `ON/OFF`, SG 미사용 검증을 포함한다.
