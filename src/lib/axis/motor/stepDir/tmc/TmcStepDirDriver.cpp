@@ -183,6 +183,9 @@ TmcStepDirDriver::TmcStepDirDriver(uint8_t axisNumber, const StepDirDriverPins *
 bool TmcStepDirDriver::init() {
   if (!StepDirDriver::init()) return false;
 
+  // interpolation isn't exposed as a runtime parameter, so use its configured default
+  if (isnan(intpol.value)) intpol.value = intpol.valueDefault;
+
   if (!driverModel) {
     DF("WRN:"); D(axisPrefix); DLF("unknown driver model!");
     return false;
