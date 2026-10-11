@@ -244,7 +244,9 @@ void StepDirMotor::setFrequencySteps(float frequency) {
     return;
   }
 
-  if (frequency != currentFrequency || microstepModeControl >= MMC_SLEWING_PAUSE) {
+  // Compare requested rates in the same tracking-microstep units.
+  // currentFrequency is divided by stepSize while slewing.
+  if (frequency != lastFrequency || microstepModeControl >= MMC_SLEWING_PAUSE) {
     lastFrequency = frequency;
 
     // if slewing has a larger step size divide the frequency to account for it

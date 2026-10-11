@@ -164,7 +164,7 @@ class StepDirMotor : public Motor {
     volatile int16_t stepSize = 1;       // step size during slews (for microstep mode switching)
     volatile bool takeStep = false;      // should we take a step
 
-    float currentFrequency = 0.0F;       // last frequency set 
+    float currentFrequency = 0.0F;       // physical STEP pulses/sec after microstep scaling and rate limits
     float lastFrequency = 0.0F;          // last frequency requested in tracking mode microsteps per second
     unsigned long lastPeriod = 0;        // last timer period (in sub-micros)
     unsigned long lastPeriodSet = 0;     // last timer period actually set (in sub-micros)
