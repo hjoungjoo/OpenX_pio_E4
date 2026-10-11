@@ -7,7 +7,7 @@
 
 ## 저장소 구조
 
-- 원본(업스트림): https://github.com/hjd1964/OnStepX — 리모트 이름 `upstream`
+- 원본(업스트림): https://github.com/hjd1964/OnStepX — 현재 URL로 직접 fetch (`upstream` 리모트 미등록)
 - 로컬(오리진): https://github.com/hjoungjoo/OpenX_pio_E4 — 리모트 이름 `origin`
 - 로컬 저장소는 업스트림 스냅샷에서 새로 시작한 **독립 히스토리**다.
   업스트림과 공통 조상이 없으므로 일반적인 공통 조상 기반 merge/rebase 대신,
@@ -17,11 +17,36 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 로컬 펌웨어 버전 | 10.29b |
+| 로컬 펌웨어 버전 | 10.29c |
 | 마지막 동기화 당시 업스트림 펌웨어 버전 | 10.28x |
-| 마지막 반영 업스트림 커밋 | `57f18ff` "Update .gitignore" (2026-10-07) |
-| 반영 방식 | `8f8dde4` ODrive 6개 파일 반영, `57f18ff`의 build 제외는 기존 `build/`로 충족 |
-| 추가 반영 PR | [#129](https://github.com/hjd1964/OnStepX/pull/129)의 decay 기본값 복구 수정 |
+| 마지막 반영 업스트림 커밋 | `8c1b5550` "Updated startup authority note" (2026-10-11 KST) |
+| 반영 방식 | 미반영 커밋 5개의 패치를 적용하고 기존 로컬 추적·명령·안전 수정을 유지 |
+| 중복 수정 확인 | PR #129, `ea3818c3` 보간 초기화, `a73b8fab` SG 미사용 검증은 10.29a에 이미 동등하게 반영 |
+
+2026-10-11 로컬 릴리즈 (`10.29c`):
+
+- `f4f41d9b`: LX200 날짜 설정 `:SC`의 확장 응답 옵션을 반영했다.
+  사용자의 Stellarium 사용 요청에 따라 `Extended.config.h`에서
+  `STRICT_LX200_DATE`를 정의해 활성화했다. 응답 구현은 업스트림과 동일하다.
+- `a2cb6a62`: Alt/Alt 모델 보정과 굴절 보정 사이의 좌표 일관성을 수정했다.
+  현재 `ALTAZM_UNL` 구성에서는 새 Alt/Alt 조건이 실행되지 않는다.
+- `1a3d74c4`, `abdd3741`: 기동 좌표 신뢰 상실 사유와 명령 거부 진단을 추가했다.
+  `DEBUG=OFF`는 유지하므로 운영 USB 포트에 디버그 로그를 출력하지 않는다.
+- `8c1b5550`: 기동 신뢰 정책 및 모터 전원 차단 후 복구 절차 문서를 반영했다.
+- 양축 `SPREADCYCLE`, 230400bps USB 통신, 펄스 가이드 타이밍 및
+  GoTo→추적 속도 전환 수정은 유지한다. 호스트 펄스 시험의 모의 객체를
+  새 `StartupAuthority::Reason` 인자에 맞췄다.
+- 검증: 명령 검증, 펄스 타이밍 240개 및 속도 전환 405개 호스트 시험이
+  ASan/UBSan에서 통과했다. ESP32 빌드 성공: RAM 63,316 / 327,680 bytes,
+  Flash 1,231,157 / 3,145,728 bytes. USB 업로드와 플래시 해시 검증을 완료했다.
+- 장치에서 `10.29c`, 양축 추적 decay `SPREADCYCLE`을 확인했다.
+  `:SC`의 원작자 확장 응답(첫 구간과 공백 32자 구간)을 정확히 확인하고,
+  이어진 버전·날짜·상태 조회 60회가 모두 정상 응답함을 확인했다.
+- INDI에서 UTC와 OFFSET을 한 벡터로 보내 날짜·시간 설정 4회와 연결 해제/
+  재연결 2회를 검사했다. 모두 성공했고, 마지막 15초 동안 좌표 갱신 13회와
+  Alert 상태 없음, 연결 유지 및 추적 OFF를 확인했다. 현재 UTC와 한국 시간대
+  (+9)를 설정했다. 날짜 응답 옵션으로 인한 오류가 관측되지 않아 활성 상태를
+  유지한다. Stellarium 앱 자체와 실제 모터 이동은 이번 시험 범위에 포함하지 않았다.
 
 2026-10-11 로컬 릴리즈 (`10.29b`, 추가 업스트림 동기화 없음):
 
@@ -146,16 +171,16 @@ RAM 63,316 / 327,680 bytes (19.3%), Flash 1,230,889 / 3,145,728 bytes (39.1%).
 ## 업스트림 비교 절차
 
 ```powershell
-git fetch upstream
-git log --oneline 65a7518..upstream/main   # 마지막 확인 기준 이후의 신규 커밋
-git diff upstream/main --stat             # 미커밋 변경을 포함한 파일 단위 차이
+git fetch --no-tags https://github.com/hjd1964/OnStepX.git main
+git log --first-parent --oneline 8c1b5550..FETCH_HEAD  # 마지막 확인 기준 이후의 신규 커밋
+git diff FETCH_HEAD --stat                          # 미커밋 변경을 포함한 파일 단위 차이
 git show <hash>                            # 개별 커밋 내용 확인
 ```
 
 주의사항:
 
 - 공통 조상이 없으므로 `git merge-base`는 실패한다(정상).
-- `git log HEAD..upstream/main`에 나오는 커밋 중 상당수는 이미 체리픽으로
+- `git log HEAD..FETCH_HEAD`에 나오는 커밋 중 상당수는 이미 체리픽으로
   반영된 것이다. 커밋 제목이 로컬 히스토리에 있는지 먼저 대조할 것.
 - 파일 diff가 크게 나오는 것은 대부분 아래 "의도된 로컬 차이" 때문이다.
   실제 검토 대상은 그 외 파일로 좁혀서 본다.
@@ -206,6 +231,7 @@ git show <hash>                            # 개별 커밋 내용 확인
 
 | 날짜 | 업스트림 버전 | 반영 내용 |
 | --- | --- | --- |
+| 2026-10-11 | 10.28x (`8c1b5550`) | Alt/Alt 좌표 변환, LX200 날짜 응답 옵션 활성화, 기동 신뢰 진단·문서 반영. 로컬 버전 10.29c |
 | 2026-09-10 | 10.28x (`65a7518`) | 중앙 차분 좌표 double 유지(`21c3834`), 부저 기본 상태 처리(`95eca32`), 홈 입력 검증은 로컬 유지, 패치 레벨 w→x |
 | 2026-08-07 | 10.28w (`8500ed5`) | sense offset constrain 버그 수정 반영(`Home.cpp`, `Macros.h`), `Home.command.cpp`는 로컬 버전 유지, 패치 레벨 v→w |
 | 2026-08-06 이전 | 10.28v | 커밋 `11959bf`까지 체리픽으로 동기화 (bissc 절대 엔코더, meridian flip homing, GUIDE_TIME_NO_LIMITS, cos() 선형화 수정, AltAzm overhead limit 복구, modem sleep 비활성화 등) |

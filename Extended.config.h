@@ -32,6 +32,9 @@
 // TMC DRIVER BACKEND --------------------------------------------------------------------------------------------------------------
 #define DRIVER_TMC_STEPPER              // Use the TMCStepper library for UART/SPI TMC drivers.
 
+// LX200 COMPATIBILITY -------------------------------------------------------------------------------------------------------------
+#define STRICT_LX200_DATE               // Enable the upstream :SC date response for Stellarium Mobile compatibility.
+
 // NON-VOLATILE STORAGE ------------------------------------------------------------------------------------------------------------
 #define NV_WIPE                       OFF //         OFF, Causes the defaults to be written back into NV (FLASH,EEPROM,etc.)  Infreq
                                           //              ***     IMPORTANT: ENABLE THIS OPTION THEN UPLOAD, WAIT A MINUTE    ***

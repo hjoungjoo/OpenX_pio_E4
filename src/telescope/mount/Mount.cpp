@@ -244,6 +244,7 @@ void Mount::begin() {
       }
     #endif
   #endif
+  startupAuthority.logStatus();
 
   VF("MSG: Mount, start tracking monitor task (rate 1000ms priority 6)... ");
   if (tasks.add(1000, 0, true, 6, mountWrapper, "MtTrack")) { VLF("success"); } else { VLF("FAILED!"); }
@@ -476,7 +477,7 @@ void Mount::update(bool guideChanged) {
 void Mount::poll() {
   #if NV_INIT_ERROR_REVOKES_AUTHORITY == ON
     if (initError.nv && startupAuthority.trusted()) {
-      startupAuthority.setTrusted(false);
+      startupAuthority.setTrusted(false, StartupAuthority::Reason::NvFault);
       DLF("WRN: Mount, startup authority trust cleared due to NV fault");
     }
   #endif
@@ -484,7 +485,7 @@ void Mount::poll() {
   // stop any movement then disable on motor hardware fault
   if (mount.motorFault()) {
     if (startupAuthority.trusted()) {
-      startupAuthority.setTrusted(false);
+      startupAuthority.setTrusted(false, StartupAuthority::Reason::MotorFault);
       DLF("WRN: Mount, startup authority trust cleared due to motor/encoder fault");
     }
     if (goTo.state > GS_NONE) goTo.abort(); else

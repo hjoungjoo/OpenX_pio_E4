@@ -94,7 +94,11 @@ struct Axis {
  bool isSlewing(){return false;}
 } axis1,axis2;
 struct {bool isEnabled(){return true;}} limits;
-struct {bool trusted(){return true;} void setTrusted(bool){}} startupAuthority;
+struct StartupAuthority {
+ enum class Reason {NotEstablished,NvFault,MotorFault};
+ bool trusted(){return true;}
+ void setTrusted(bool,Reason=Reason::NotEstablished){}
+} startupAuthority;
 struct {int state=GS_NONE;void abort(){}} goTo;
 struct {void flashRate(int){} void soundAlert(){}} mountStatus;
 struct {void guideDone(bool){}} home;
