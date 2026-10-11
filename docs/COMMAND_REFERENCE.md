@@ -210,7 +210,7 @@ Available when `MOUNT_PRESENT` is enabled.
 | `:GXEE#` | `0#`, `1#`, ... | Mount coordinate mode (`MOUNT_COORDS - 1`) |
 | `:GXEF#` | `1` or `0` | Axis2 tangent-arm presence flag |
 | `:GXEG#` | `1` or `0` | Axis1 sector-gear presence flag |
-| `:GXEM#` | `n#` | Current mount type |
+| `:GXEM#` | `n#` | Saved mount type selection (effective after restart) |
 | `:GXF3#` | `sn.nnnnnn#` | Axis1 step frequency |
 | `:GXF4#` | `sn.nnnnnn#` | Axis2 step frequency |
 | `:GXFA#` | `50%#` | Reported workload placeholder |

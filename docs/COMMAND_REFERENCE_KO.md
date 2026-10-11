@@ -210,7 +210,7 @@ English version: `COMMAND_REFERENCE.md`
 | `:GXEE#` | `0#`, `1#`, ... | Mount coordinate mode (`MOUNT_COORDS - 1`) |
 | `:GXEF#` | `1` 또는 `0` | Axis2 tangent-arm 존재 flag |
 | `:GXEG#` | `1` 또는 `0` | Axis1 sector-gear 존재 flag |
-| `:GXEM#` | `n#` | 현재 mount type |
+| `:GXEM#` | `n#` | 저장된 mount type 선택값 (재시작 후 적용) |
 | `:GXF3#` | `sn.nnnnnn#` | Axis1 step frequency |
 | `:GXF4#` | `sn.nnnnnn#` | Axis2 step frequency |
 | `:GXFA#` | `50%#` | workload 보고용 placeholder |
