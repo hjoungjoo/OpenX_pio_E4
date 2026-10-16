@@ -164,7 +164,6 @@ void Park::requestAborted() {
   axis1.setBacklash(mount.settings.backlash.axis1);
   axis2.setBacklash(mount.settings.backlash.axis2);
   
-  mount.tracking(wasTracking);
 }
 
 // once parked save the park state
@@ -222,7 +221,7 @@ CommandError Park::restore(bool withTrackingOn) {
       VLF("MSG: Mount, unpark from home disabled by startup authority policy");
       return CE_NOT_PARKED;
     #else
-      if (goTo.absoluteEncodersPresent) {
+      if (mount.hasAbsoluteEncoders()) {
         VLF("MSG: Mount, unpark from home disabled when absolute position sources are present");
         return CE_NOT_PARKED;
       }
@@ -248,7 +247,7 @@ CommandError Park::restore(bool withTrackingOn) {
     wormSenseSteps = settings.wormSensePositionSteps;
   #endif
 
-  if (!goTo.absoluteEncodersPresent) {
+  if (!mount.hasAbsoluteEncoders()) {
 
     // reset the mount, zero backlash
     DLF("DBG: Park.restore before home.reset");
@@ -297,7 +296,7 @@ CommandError Park::restore(bool withTrackingOn) {
   }
   
   limits.enabled(true);
-  if (!goTo.absoluteEncodersPresent) mount.syncFromOnStepToEncoders = true;
+  if (!mount.hasAbsoluteEncoders()) mount.syncFromOnStepToEncoders = true;
 
   if (withTrackingOn) {
     state = PS_UNPARKED;

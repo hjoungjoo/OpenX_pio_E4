@@ -158,7 +158,6 @@ CommandError Home::requestWithReset() {
 void Home::requestAborted() {
   state = HS_NONE;
   failed = true;
-  mount.tracking(wasTracking);
 }
 
 // after finding home switches displace the mount axes as specified
@@ -268,7 +267,7 @@ CommandError Home::reset(bool fullReset, bool authoritative) {
 
   Coordinate homePosition = getPosition(CR_MOUNT);
 
-  if (!goTo.absoluteEncodersPresent) {
+  if (!mount.hasAbsoluteEncoders()) {
     #if MOUNT_HOME_AT_OFFSETS == OFF
       if (useOffset() && state == HS_HOMING && !fullReset) {
         homePosition.a1 += arcsecToRad(site.locationEx.latitude.sign*settings.axis1.senseOffset);
@@ -278,7 +277,7 @@ CommandError Home::reset(bool fullReset, bool authoritative) {
 
     bool bypassCoordinateLimit = authoritative;
     #if MOUNT_STARTUP_MODE == SA_AUTO && MOUNT_COORDS_MEMORY == OFF
-      if (!bypassCoordinateLimit && !axis1.motor->hasAbsoluteEncoder() && !axis2.motor->hasAbsoluteEncoder()) {
+      if (!bypassCoordinateLimit) {
         bypassCoordinateLimit = true;
       }
     #endif

@@ -41,11 +41,19 @@ of both mount axes. Establish it in one of the following ways.
 For a basic mount under `SA_AUTO`, session trust is already granted at boot **on the
 assumption** that the user will establish the initial position reference through home or sync:
 
-- **Home:** With clutches, physically place the mount home before powering on.
-  Without clutches, power on and guide to physical home, then reset home with
-  `:hF#` to begin normal operation.
+- **Home:** With clutches, physically place the mount at home before powering on.
+  OnStepX assumes the mount is at home at startup, so goto can be used directly
+  once the usual readiness checks pass. If you use guide controls to reach
+  physical home after powering on, reset home with `:hF#` before goto. This also
+  provides the startup workflow for a mount without clutches.
 - **Sync:** Point at a known sky position, supply its coordinates, and sync.
   An accepted sync establishes or corrects the coordinate reference.
+
+Software limits are disabled during this startup phase so directional guide commands time
+out after 5 seconds by default; see [Motion safety](#motion-safety-whenever-soft-limits-are-disabled).
+This somewhat aggressive guard helps protect the mount and what's riding on it from unbounded guides due
+to broken communication that may occasionally occur.  To keep moving continiously, briefly release and press
+the direction button again every few seconds.
 
 Sync can establish the position reference when the startup authority policy
 permits it. The firmware's trust flag must already be set for ordinary sync to
@@ -68,7 +76,7 @@ resuming coordinate-based operation.
 ### From absolute encoders or coordinate memory
 
 Power on and allow startup to recover the position automatically from the configured source.
-Once a valid position has been accepted and normal readiness checks are complete,
+Once a valid position has been accepted and readiness checks are complete,
 normal operation can begin.
 
 If the source has not been initialized, follow
@@ -111,12 +119,19 @@ trust checks. Hardware protections remain active.
 
 ## First-time origin setup
 
-Where absolute encoders or coordinate memory require first-time origin setup:
+Coordinate memory or absolute encoders **require** a first-time origin setup:
 
 1. Physically establish the known home/origin, using directional guiding as allowed
    by [Motion safety](#motion-safety-whenever-soft-limits-are-disabled).
-2. Stop all motion and tracking, then use `:SEO#` to initialize the applicable
-   origin (usually using the SWS or Website control via the `DISPLAY_COORDINATE_ORIGIN` option).
+2. Stop all motion and tracking, then set the applicable origin using the
+   appropriate control below.
+   - Enabling `DISPLAY_COORDINATE_ORIGIN` in the SmartWebServer or Website adds a
+     Set Origin control to the Mount page for OnStepX absolute encoder servos or
+     mount coordinate memory. This sends the `:SEO#` command to OnStepX.
+   - For absolute encoders hosted by the SmartWebServer, use the Set
+     Origin control on the Encoders page. This uses OnStepX's current axis
+     coordinates as the reference, so first ensure they match the physical
+     position (for example, reset home with `:hF#` when physically at home).
 3. Complete any required restart, then follow normal startup.
 
 Origin setup declares a known physical reference. It is not a general fault-clear
@@ -124,11 +139,12 @@ operation. Restart requirements are listed in the technical notes below.
 
 ## Motion safety whenever soft limits are disabled
 
-- Directional guiding remains available on basic mounts while untrusted.
+- Directional guiding remains available on basic mounts to facilitate moving
+  to the home position as part of the usual startup procedure.
 - For coordinate memory, initial guiding requires both saved-position records to
   be missing. Untrusted, unreadable, or incompatible records do not reopen that
   permission.
-- With absolute position sources and coordinate memory OFF, guiding is allowed
+- With absolute encoders and coordinate memory OFF, guiding is allowed
   before trust has first been established in the current session, but blocked
   after established trust is lost.
 - `GUIDE_TIME_NO_LIMITS` replaces the normal guide timeout. The default is 5 seconds
@@ -142,19 +158,34 @@ its usual checks.
 
 ## Recovering after a fault
 
-An NV or reported motor/encoder fault can revoke coordinate trust. Clearing the
-fault does not automatically restore it, even if the mount was parked or disabled.
-A stop caused by limits or StallGuard alone does not revoke trust.
+Clearing a fault does not automatically restore coordinate trust.
+`SA_PERMISSIVE` does not bypass runtime fault handling.
 
-Resolve any NV fault before restoring trust. Do not cycle motor/driver power
-independently while the microcontroller remains powered. After motor/driver power loss,
-restore that power and restart OnStepX to repeat motor/encoder initialization and
-any required motor calibration. Then follow the normal startup workflow for the
-configured position source. `SA_PERMISSIVE` does not bypass runtime fault handling.
+### NV (Non-Volatile memory for settings) faults
 
 NV faults block or revoke trust when `NV_INIT_ERROR_REVOKES_AUTHORITY` is ON
-(default). Setting it OFF disables that NV check; motor/encoder fault handling
+(default). Resolve the NV fault (clear corrupt stored data or repair/replace faulty
+hardware). Then restart OnStepX and follow the normal startup workflow
+under the configured startup authority policy.
+
+Clearing NV can erase saved origins, positions, and park data, so first-time setup
+may be needed afterward.
+
+Setting the option OFF disables that NV trust check; motor/encoder fault handling
 still applies.
+
+### Motor/encoder faults
+
+A reported motor/encoder fault revokes trust even if the mount was parked or
+disabled. Resolve the hardware fault (check cables and repair or replace faulty
+hardware). Then restart OnStepX and follow the normal startup workflow under the
+configured startup authority policy.
+
+Do not cycle motor/driver power independently while the microcontroller remains
+powered. After motor/driver power loss, restore that power and restart OnStepX to
+repeat motor/encoder initialization and any required motor calibration.
+
+A stop caused by limits or StallGuard alone does not revoke trust.
 
 ## Technical notes: position sources
 

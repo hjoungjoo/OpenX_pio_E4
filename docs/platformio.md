@@ -66,13 +66,19 @@ With Python 3 and a host C++17 compiler installed:
 bash tools/test_commands.sh
 python3 tests/host/tracking_pulse_test.py
 python3 tests/host/stepdir_transition_test.py
+python3 tests/host/upstream_safety_test.py
 ```
 
 The pulse test extracts the current firmware's tracking, guide and coordinate
 functions, substitutes a deterministic clock and hardware stubs, and checks
 240 timing cases across Alt/Az, Alt/Alt and equatorial mounts. It also checks
 overlapping axes, guide changes during a periodic calculation, reversal and
-abort. All three tests enable AddressSanitizer and UndefinedBehaviorSanitizer.
+abort. It also checks 800 trajectory derivatives across both non-equatorial
+mount types, five compensation modes, directions and tracking offsets. The
+refraction and pointing corrections in this fixture are synthetic; they expose
+asymmetric endpoint handling without claiming real atmospheric accuracy.
+Input changes across yields and non-finite rate rejection are covered as well.
+All four tests enable AddressSanitizer and UndefinedBehaviorSanitizer.
 
 The step/dir transition test compiles the current frequency and mode-switch
 functions and checks requested rates across microstep ratios, acceleration,
@@ -80,6 +86,13 @@ deceleration, repeated rates, stop/restart and backlash. It covers PULSE,
 SQUARE and DEDGE waveforms, including the regression where a new tracking
 rate numerically equals the previous coarse-microstep pulse rate. ISR boundary
 arrival and hardware are stubbed; it does not measure vibration or step loss.
+
+The upstream safety test compiles the actual NV volume and CRC implementation
+with an in-memory device. It checks repeated reset requests, durable flushes,
+I/O failures, timeouts and cancelled MCU resets. It also covers numeric/model
+coefficient validation, alignment round trips and fallback, pole orientation,
+runtime Sync settings (including failed-save preservation), and home/park abort.
+No physical device is accessed by these host tests.
 
 In a ptrace-based sandbox, use `ASAN_OPTIONS=detect_leaks=0` if LeakSanitizer
 cannot enumerate threads. This does not replace a device output timing test.

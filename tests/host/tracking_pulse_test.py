@@ -36,7 +36,7 @@ prefix = r'''
 #include <cassert>
 #include <cstdint>
 #include <functional>
-using std::isnan; using std::isinf;
+using std::isnan; using std::isinf; using std::isfinite;
 #define ON 1
 #define OFF 0
 #define NV_INIT_ERROR_REVOKES_AUTHORITY 0
@@ -58,6 +58,7 @@ constexpr double TenthArcSec=M_PI/(180*36000);
 constexpr int ALTAZM=1, ALTALT=2, EQ=3;
 constexpr int TS_NONE=0, TS_SIDEREAL=1, GS_NONE=0, CR_MOUNT_ALL=0;
 constexpr int RC_NONE=0, RC_MODEL=1, RC_MODEL_DUAL=2, RC_REFRACTION=3, RC_REFRACTION_DUAL=4;
+using TrackingState=int; using RateCompensation=int; using PierSide=int;
 constexpr int SF_STOPPED=0, SF_SLEWING=1, PIER_SIDE_WEST=1;
 enum GuideAction {GA_NONE,GA_BREAK,GA_FORWARD,GA_REVERSE,GA_HOME};
 enum GuideState {GU_NONE,GU_PULSE_GUIDE,GU_GUIDE,GU_SPIRAL_GUIDE,GU_HOME_GUIDE,GU_HOME_GUIDE_ABORT};
@@ -74,6 +75,7 @@ struct Coordinate {double h=-0.03,d=45*M_PI/180,a=0,aa2=0,z=0,aa1=0;int pierSide
 struct Site {struct {struct {double sine=sin(37*M_PI/180),cosine=cos(37*M_PI/180);} latitude;} locationEx;float getSiderealRatio(){return 1;}} site;
 struct Transform {
  int mountType=ALTAZM;
+ bool syntheticCorrections=false;
  bool isEquatorial(){return mountType==EQ;}
  void equToHor(Coordinate*);
  void horToEqu(Coordinate*);
@@ -82,8 +84,21 @@ struct Transform {
  void equToAa(Coordinate* c){equToHor(c);horToAa(c);}
  void aaToEqu(Coordinate* c){aaToHor(c);horToEqu(c);}
  void mountToTopocentric(Coordinate*){}
- void topocentricToObservedPlace(Coordinate*){}
- void observedPlaceToMount(Coordinate*){}
+ // Deliberately non-identity corrections expose overwritten or stale endpoints.
+ // These are test models, not a claim about atmospheric/model accuracy.
+ void topocentricToObservedPlace(Coordinate* c){
+   if(!syntheticCorrections)return;
+   if(mountType!=ALTAZM)equToHor(c);
+   c->a+=0.01*cos(c->a);
+   if(mountType!=ALTAZM)horToEqu(c);
+ }
+ void observedPlaceToMount(Coordinate* c){
+   if(!syntheticCorrections)return;
+   double *a=mountType==ALTAZM?&c->z:mountType==ALTALT?&c->aa1:&c->h;
+   double *b=mountType==ALTAZM?&c->a:mountType==ALTALT?&c->aa2:&c->d;
+   const double x=*a,y=*b;
+   *a=x+0.003*sin(y); *b=y+0.002*cos(x);
+ }
 } transform;
 struct Axis {
  float frequency=0;
@@ -93,7 +108,7 @@ struct Axis {
  void autoSlewAbort(){} void autoSlewStop(){} bool isEnabled(){return true;}
  bool isSlewing(){return false;}
 } axis1,axis2;
-struct {bool isEnabled(){return true;}} limits;
+struct {bool isMotionAllowed(){return true;}} limits;
 struct StartupAuthority {
  enum class Reason {NotEstablished,NvFault,MotorFault};
  bool trusted(){return true;}
@@ -196,6 +211,82 @@ void interleaving(int type){
  guide.stopAxis2(GA_BREAK,true);
  assert(fabs(axis1.frequency-base1)<1e-8 && fabs(axis2.frequency-base2)<1e-8);
 }
+// Independent short-time trajectory derivative, using a different step size
+// from the firmware. Each endpoint is a complete sky-to-mount transformation.
+Coordinate trajectory(double t){
+ Coordinate c=mount.current;
+ c.h+=t*(mount.trackingRate-mount.trackingRateOffsetRA+guide.rateAxis1);
+ c.d+=t*(mount.trackingRateOffsetDec+guide.rateAxis2);
+ if(transform.mountType==ALTAZM)transform.equToHor(&c);
+ if(mount.settings.rc!=RC_NONE)transform.topocentricToObservedPlace(&c);
+ if(transform.mountType==ALTALT)transform.equToAa(&c);
+ if(mount.settings.rc==RC_MODEL || mount.settings.rc==RC_MODEL_DUAL)transform.observedPlaceToMount(&c);
+ return c;
+}
+void accuracy(){
+ int count=0;
+ transform.syntheticCorrections=true;
+ for(int type:{ALTAZM,ALTALT})
+  for(int rc:{RC_NONE,RC_REFRACTION,RC_REFRACTION_DUAL,RC_MODEL,RC_MODEL_DUAL})
+   for(double h:{-1.2,-0.4,0.3,1.1})
+    for(int axis:{1,2})
+     for(float rate:{-1.0f,-0.001f,0.0f,0.001f,1.0f})
+      for(float offset:{0.0f,0.15f}){
+       transform.mountType=type;mount=Mount();guide=Guide();
+       mount.current.h=h; mount.current.d=0.2;
+       mount.settings.rc=rc;mount.trackingRateOffsetRA=offset;
+       mount.trackingRateOffsetDec=-offset/2;guide.state=GU_PULSE_GUIDE;
+       if(axis==1)guide.rateAxis1=rate;else guide.rateAxis2=rate;
+       constexpr double dt=1e-6;
+       const Coordinate a=trajectory(dt),b=trajectory(-dt);
+       const double expected1=std::remainder(type==ALTAZM?a.z-b.z:a.aa1-b.aa1,Deg360)/(2*dt);
+       const double expected2=(type==ALTAZM?a.a-b.a:a.aa2-b.aa2)/(2*dt);
+       assert(fabs(expected1)<20 && fabs(expected2)<20);
+       mount.update(true);
+       assert(fabs(mount.trackingRateAxis1-expected1)<2e-5);
+       assert(fabs(mount.trackingRateAxis2-expected2)<2e-5);
+       assert(mount.current.h==h && mount.current.d==0.2);
+       ++count;
+      }
+ transform.syntheticCorrections=false;
+ std::cout<<count<<" compensated trajectory derivative cases passed\n";
+}
+void changedInputs(){
+ for(int type:{ALTAZM,ALTALT,EQ}){
+   transform.mountType=type;
+   for(int change=0;change<5;change++){
+     mount=Mount();guide=Guide();mount.settings.rc=RC_MODEL_DUAL;
+     onYield=[change](){
+       if(change==0)mount.trackingRate=0.8;
+       if(change==1)mount.trackingRateOffsetRA=0.2;
+       if(change==2)mount.trackingRateOffsetDec=0.2;
+       if(change==3)mount.settings.rc=RC_REFRACTION_DUAL;
+       if(change==4)mount.trackingState=TS_NONE;
+     };
+     mount.poll();assert(!onYield);
+     const float one=axis1.frequency,two=axis2.frequency;
+     mount.update(true);
+     assert(fabs(one-axis1.frequency)<1e-8 && fabs(two-axis2.frequency)<1e-8);
+   }
+   // Any explicit rate change must take effect without waiting for poll().
+   mount=Mount();guide=Guide();mount.update(true);
+   float one=axis1.frequency,two=axis2.frequency;
+   mount.trackingRate=0.5;mount.update();
+   assert(std::hypot(one-axis1.frequency,two-axis2.frequency)>1e-7);
+ }
+ std::cout<<"input-change retry and immediate tracking-rate update checks passed\n";
+}
+void invalidRates(){
+ for(int type:{ALTAZM,ALTALT,EQ})for(float bad:{NAN,INFINITY,-INFINITY}){
+   transform.mountType=type;mount=Mount();guide=Guide();
+   mount.settings.rc=RC_MODEL_DUAL;mount.trackingRate=bad;
+   mount.update(true);
+   assert(axis1.frequency==0 && axis2.frequency==0);
+   mount.trackingRate=1;mount.trackingRateOffsetDec=bad;mount.update(true);
+   assert(axis1.frequency==0 && axis2.frequency==0);
+ }
+ std::cout<<"non-finite rate rejection checks passed\n";
+}
 int main(){
  int count=0;
  for(int type:{ALTAZM,ALTALT,EQ})
@@ -207,6 +298,7 @@ int main(){
      }
  for(int type:{ALTAZM,ALTALT})interleaving(type);
  std::cout<<count<<" timing cases and two-axis/preemption/reversal/abort checks passed\n";
+ accuracy();changedInputs();invalidRates();
 }
 '''
 with tempfile.TemporaryDirectory(prefix='onstep-pulse-test-') as tmp:
