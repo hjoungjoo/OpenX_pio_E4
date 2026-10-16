@@ -438,9 +438,9 @@ English version: `COMMAND_REFERENCE.md`
 | `:SoDD#` | `0/1` | Overhead altitude limit 설정 |
 | `:SXE9,n#` | `0/1` | East meridian limit 설정, minutes |
 | `:SXEA,n#` | `0/1` | West meridian limit 설정, minutes |
-| `:GXEH#` / `:SXEH,n#` | `n#` / `0/1` | 적도의 Sync/정렬의 최대 절대 적위 조회/설정, 60~90도; 90은 제한 OFF |
-| `:GXEI#` / `:SXEI,n#` | `n#` / `0/1` | Axis1 Sync 오프셋 한계 조회/설정, 0~30도; 0은 제한 OFF |
-| `:GXEJ#` / `:SXEJ,n#` | `n#` / `0/1` | Axis2 Sync 오프셋 한계 조회/설정, 0~30도; 0은 제한 OFF |
+| `:GXEH#` / `:SXEH,n#` | `n.nnnnnn#` / `0/1` | 적도의 Sync/정렬의 최대 절대 적위 조회/설정, 60~90도; 90은 제한 OFF |
+| `:GXEI#` / `:SXEI,n#` | `n.nnnnnn#` / `0/1` | Axis1 Sync 오프셋 한계 조회/설정, 0~30도; 0은 제한 OFF |
+| `:GXEJ#` / `:SXEJ,n#` | `n.nnnnnn#` / `0/1` | Axis2 Sync 오프셋 한계 조회/설정, 0~30도; 0은 제한 OFF |
 
 H/I/J는 소수점 도 단위를 받으며 NV에 저장한다. 기본값은 H=85도,
 I/J=OFF다. 저장 실패 시 실행 중 값은 유지한다. H는 적도의에만 적용한다.

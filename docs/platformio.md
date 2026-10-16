@@ -67,6 +67,7 @@ bash tools/test_commands.sh
 python3 tests/host/tracking_pulse_test.py
 python3 tests/host/stepdir_transition_test.py
 python3 tests/host/upstream_safety_test.py
+python3 tests/host/home_reset_test.py
 ```
 
 The pulse test extracts the current firmware's tracking, guide and coordinate
@@ -78,7 +79,7 @@ mount types, five compensation modes, directions and tracking offsets. The
 refraction and pointing corrections in this fixture are synthetic; they expose
 asymmetric endpoint handling without claiming real atmospheric accuracy.
 Input changes across yields and non-finite rate rejection are covered as well.
-All four tests enable AddressSanitizer and UndefinedBehaviorSanitizer.
+All five tests enable AddressSanitizer and UndefinedBehaviorSanitizer.
 
 The step/dir transition test compiles the current frequency and mode-switch
 functions and checks requested rates across microstep ratios, acceleration,
@@ -92,6 +93,11 @@ with an in-memory device. It checks repeated reset requests, durable flushes,
 I/O failures, timeouts and cancelled MCU resets. It also covers numeric/model
 coefficient validation, alignment round trips and fallback, pole orientation,
 runtime Sync settings (including failed-save preservation), and home/park abort.
+The home reset test compiles the current reset function with simulated motor
+counters, absolute sources and coordinate limits. It checks reference preservation,
+startup initialization, rejection before either axis is changed, authoritative
+homing, busy motion and failed counter resets across ordinary, wrapping, sector
+and tangent-arm configurations.
 No physical device is accessed by these host tests.
 
 In a ptrace-based sandbox, use `ASAN_OPTIONS=detect_leaks=0` if LeakSanitizer

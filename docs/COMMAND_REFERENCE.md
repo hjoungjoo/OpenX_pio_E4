@@ -440,9 +440,9 @@ see [GOTO_NOTES.md](GOTO_NOTES.md#workflow-4-reachability-and-target-unwinding).
 | `:SoDD#` | `0/1` | Set overhead altitude limit |
 | `:SXE9,n#` | `0/1` | Set east meridian limit in minutes |
 | `:SXEA,n#` | `0/1` | Set west meridian limit in minutes |
-| `:GXEH#` / `:SXEH,n#` | `n#` / `0/1` | Get/set equatorial Sync/align maximum absolute declination, 60–90 degrees; 90 disables the limit |
-| `:GXEI#` / `:SXEI,n#` | `n#` / `0/1` | Get/set axis1 Sync offset limit, 0–30 degrees; 0 disables the limit |
-| `:GXEJ#` / `:SXEJ,n#` | `n#` / `0/1` | Get/set axis2 Sync offset limit, 0–30 degrees; 0 disables the limit |
+| `:GXEH#` / `:SXEH,n#` | `n.nnnnnn#` / `0/1` | Get/set equatorial Sync/align maximum absolute declination, 60–90 degrees; 90 disables the limit |
+| `:GXEI#` / `:SXEI,n#` | `n.nnnnnn#` / `0/1` | Get/set axis1 Sync offset limit, 0–30 degrees; 0 disables the limit |
+| `:GXEJ#` / `:SXEJ,n#` | `n.nnnnnn#` / `0/1` | Get/set axis2 Sync offset limit, 0–30 degrees; 0 disables the limit |
 
 H/I/J accept decimal degrees and persist in NV. Defaults are 85 degrees for H
 and OFF for I/J. Failed writes leave the running value unchanged. H applies
