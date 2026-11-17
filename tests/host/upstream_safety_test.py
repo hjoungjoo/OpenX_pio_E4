@@ -49,6 +49,7 @@ using std::isfinite;
 #define AXIS2_TANGENT_ARM_CORRECTION OFF
 #define CRC_YIELD_BYTES 0
 #define HAL_RESET() (++resetCalls)
+#define MOUNT_PRESENT
 enum CommandError {CE_NONE,CE_0,CE_PARAM_FORM,CE_PARAM_RANGE,CE_SLEW_ERR_OUTSIDE_LIMITS};
 enum PierSide {PIER_SIDE_NONE,PIER_SIDE_EAST,PIER_SIDE_WEST};
 constexpr int ALTAZM=3,ALTALT=4,GEM=1,FORK=2;
@@ -93,6 +94,7 @@ struct Convert {bool atof2(char*,double*,bool=true);} convert;
 struct Axis {float backlash=0;void setBacklash(float x){backlash=x;}} axis1,axis2;
 struct Mount {
  bool trackingOn=false;int trackingCalls=0;
+ bool enabled=true;void enable(bool state){enabled=state;}
  void tracking(bool b){trackingOn=b;++trackingCalls;}
  struct {struct {float axis1=1,axis2=2;} backlash;} settings;
 } mount;
@@ -186,10 +188,12 @@ void storageTests(){
    nvReset(reply,&error);assert(error==CE_0 && strstr(reply,"failed"));
    if(device.stalled)assert(clockMs==30000);
  }
- prepareStorage();error=CE_NONE;mcuReset(reply,&error);
- assert(error==CE_NONE && resetCalls==1 && device.polls>=2);
- prepareStorage();error=CE_NONE;device.stalled=true;mcuReset(reply,&error);
- assert(error==CE_0 && resetCalls==0);
+ prepareStorage();error=CE_NONE;mount.enabled=true;mcuReset(reply,&error);
+ assert(error==CE_NONE && resetCalls==1 && device.polls>=2 && !mount.enabled);
+ prepareStorage();error=CE_NONE;mount.enabled=true;device.stalled=true;mcuReset(reply,&error);
+ assert(error==CE_0 && resetCalls==0 && !mount.enabled);
+ prepareStorage();error=CE_NONE;mount.enabled=true;device.commitFail=true;mcuReset(reply,&error);
+ assert(error==CE_0 && resetCalls==0 && !mount.enabled);
  std::cout<<"NV repeated reset, durable flush, I/O failure and timeout checks passed\n";
 }
 void parsingTests(){

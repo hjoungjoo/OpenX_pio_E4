@@ -25,3 +25,18 @@ z.*
 .work_mf_OnStepX/
 *.log
 serial_*.log
+
+# Upstream scratch directories; retain this project's maintained tests and tools.
+/testing/
+/tests/
+/tools/
+!/tests/
+/tests/*
+!/tests/host/
+!/tests/host/**
+!/tools/
+/tools/*
+!/tools/arduino-cli.ps1
+!/tools/pio.ps1
+!/tools/platformio_main.cpp
+!/tools/test_commands.sh

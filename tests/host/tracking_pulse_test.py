@@ -136,7 +136,7 @@ struct Guide {
  unsigned long guideFinishTimeAxis1=0,guideFinishTimeAxis2=0;
  bool activeAxis1(){return guideActionAxis1!=GA_NONE;}
  bool activeAxis2(){return guideActionAxis2!=GA_NONE;}
- void abort(){} CommandError validate(int,GuideAction){return CE_NONE;}
+ void abort(){} CommandError validate(int,GuideAction,bool=false){return CE_NONE;}
  float rateSelectToRate(GuideRateSelect r,int){return r==GR_MAX?100:selectedRate;}
  void finalizeTimeLimit(unsigned long&){} void backlashEnableControl(bool){}
  void axis1AutoSlew(GuideAction){} void axis2AutoSlew(GuideAction){}

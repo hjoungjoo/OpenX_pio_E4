@@ -68,6 +68,7 @@ python3 tests/host/tracking_pulse_test.py
 python3 tests/host/stepdir_transition_test.py
 python3 tests/host/upstream_safety_test.py
 python3 tests/host/home_reset_test.py
+python3 tests/host/upstream_202611_test.py
 ```
 
 The pulse test extracts the current firmware's tracking, guide and coordinate
@@ -79,7 +80,7 @@ mount types, five compensation modes, directions and tracking offsets. The
 refraction and pointing corrections in this fixture are synthetic; they expose
 asymmetric endpoint handling without claiming real atmospheric accuracy.
 Input changes across yields and non-finite rate rejection are covered as well.
-All five tests enable AddressSanitizer and UndefinedBehaviorSanitizer.
+All six tests enable AddressSanitizer and UndefinedBehaviorSanitizer.
 
 The step/dir transition test compiles the current frequency and mode-switch
 functions and checks requested rates across microstep ratios, acceleration,
@@ -99,6 +100,14 @@ startup initialization, rejection before either axis is changed, authoritative
 homing, busy motion and failed counter resets across ordinary, wrapping, sector
 and tangent-arm configurations.
 No physical device is accessed by these host tests.
+
+The November integration test covers pulse/manual guide transitions and GoTo
+stop completion, raw LX200 ACK and live mount geometry, below-horizon
+refraction, and the upstream WiFi sleep override. Brake control is compiled
+with the feature disabled, with one release output, and with separate release
+and hold outputs; startup failures, motor faults and explicit disables are
+tested using simulated GPIOs and time. These fixtures do not validate a real
+brake circuit or the UNO R4 hardware timers.
 
 In a ptrace-based sandbox, use `ASAN_OPTIONS=detect_leaks=0` if LeakSanitizer
 cannot enumerate threads. This does not replace a device output timing test.

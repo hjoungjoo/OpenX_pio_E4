@@ -88,7 +88,9 @@ English version: `COMMAND_REFERENCE.md`
 | `:SB8#` | `1` 후 2400 baud로 전환 | Serial baud rate 설정 |
 | `:SB9#` | `1` 후 1200 baud로 전환 | Serial baud rate 설정 |
 | `:GE#` | `CC#` | 마지막 명령 에러 코드 조회 |
-| `<0x06>` | `A`, `P`, 또는 `CK_FAIL` 형식 응답 | buffer/processor가 처리하는 특수 LX200 상태 조회 또는 체크섬 실패 경로 |
+| `<0x06>` | 한 문자, `#` 없음 | 원시 LX200 ACK 조회. buffer가 `:Gw#`로 변환해 서브시스템으로 전달 |
+
+체크섬이 잘못된 프레임에는 체크섬을 포함한 `CK_FAIL` 응답을 반환한다. 원시 ACK 조회와 별도 경로다.
 
 ## 분배 순서 참고
 
@@ -455,12 +457,15 @@ tangent arm 구성에서 우회한다. 홈·주차 중단 시에는 이전 추�
 | `:Gm#` | `E#`, `W#`, 또는 `N#` | Meridian pier side |
 | `:GU#` | status string | 사람이 읽을 수 있는 packed status |
 | `:Gu#` | packed bytes | Bit-packed status |
-| `:GW#` | 4-char status | Mount type, tracking, parked/home, align-done |
+| `:GW#` | 상태 3문자와 `#` | 마운트(`G` GEM, `P` fork, `A` 경위대·Alt-Alt), 추적(`T`/`N`), 주차 `P`·홈 `H`·정렬 완료 `1`/미완료 `0` |
+| `:Gw#` | 한 문자, `#` 없음 | 현재 동작 형식. GEM/fork는 `P`, 경위대/Alt-Alt는 `A`. 원시 `<0x06>` 조회도 같은 경로 사용 |
 | `:SX97,0#` | `0/1` | Buzzer 비활성 |
 | `:SX97,1#` | `0/1` | Buzzer 활성 |
 | `:SX97,2#` | `0/1` | Beep |
 | `:SX97,3#` | `0/1` | Alert tone |
 | `:SX97,4#` | `0/1` | Click |
+
+경위대와 Alt-Alt는 `:GU#` 또는 `:Gu#`로 구분한다. 체크섬 형식의 `:Gw#` 요청에는 일반 체크섬 응답 프레임을 사용한다.
 
 #### `:GU#` 상태 문자
 

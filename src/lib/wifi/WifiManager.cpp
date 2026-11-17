@@ -83,7 +83,7 @@ void pollStationWrapper() { wifiManager.pollStation(); }
 #endif
 
 static void applyWifiPerformanceMode() {
-  #if WIFI_HIGH_PERFORMANCE == ON
+  #if WIFI_HIGH_PERFORMANCE == ON && !defined(WIFI_MANAGER_ALLOW_SLEEP)
     #if defined(ESP32)
       WiFi.setSleep(false);
     #elif defined(ESP8266)

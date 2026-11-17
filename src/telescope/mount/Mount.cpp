@@ -58,6 +58,10 @@ static float limitTrackingRate(float rate, uint8_t axisNumber) {
 }
 
 void Mount::init() {
+  #if MOUNT_BRAKE == ON
+    initBrake();
+  #endif
+
   startupAuthority.init();
 
   nvKey = nv().kv().computeKey("MOUNT_SETTINGS");
@@ -246,6 +250,10 @@ void Mount::begin() {
   #endif
   startupAuthority.logStatus();
 
+  #if MOUNT_BRAKE == ON
+    beginBrake();
+  #endif
+
   VF("MSG: Mount, start tracking monitor task (rate 1000ms priority 6)... ");
   if (tasks.add(1000, 0, true, 6, mountWrapper, "MtTrack")) { VLF("success"); } else { VLF("FAILED!"); }
 
@@ -393,6 +401,12 @@ void Mount::tracking(bool state) {
 
 // enables or disables power to the mount motors
 void Mount::enable(bool state) {
+  #if MOUNT_BRAKE == ON
+    // Brake release is a startup-only operation. A fault or explicit disable requires a reboot.
+    if (state && brakeMonitoring && (!brakeReleased || brakeFaultLatched)) state = false;
+    if (!state) engageBrake();
+  #endif
+
   if (state == false) {
     trackingState = TS_NONE;
     update();

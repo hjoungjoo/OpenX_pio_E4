@@ -24,6 +24,7 @@ Add new documents and document updates under `docs/`.
 | `GOTO_NOTES.md` | Goto behavior and limits |
 | `HOMING_NOTES.md` | Homing behavior |
 | `PARKING_NOTES.md` | Parking, parked startup, unpark, and fault recovery |
+| `BRAKE_NOTES.md` | Electromechanical mount brakes, startup release, and latched fault recovery |
 | `PEC_NOTES.md` | PEC behavior |
 | `STARTUP_AUTHORITY_NOTES.md` | Startup authority |
 | `SENSING_NOTES.md` | Sensor and input sensing |

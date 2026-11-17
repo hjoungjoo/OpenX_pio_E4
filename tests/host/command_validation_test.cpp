@@ -17,6 +17,25 @@ int main() {
   buffer.flush();
   assert(!buffer.ready());
 
+  // Raw LX200 ACK follows normal subsystem dispatch and never caches geometry.
+  for (int i = 0; i < 3; ++i) {
+    buffer.add((char)6);
+    assert(buffer.ready() && !buffer.checksum);
+    assert(std::strcmp(buffer.getCmd(), "Gw") == 0);
+    assert(std::strcmp(buffer.getParameter(), "") == 0);
+    buffer.flush();
+  }
+  for (char c : ";GwBE7#") if (c) buffer.add(c);
+  assert(buffer.ready() && buffer.checksum);
+  assert(std::strcmp(buffer.getCmd(), "Gw") == 0);
+  assert(std::strcmp(buffer.getParameter(), "") == 0);
+  assert(buffer.getSeq()[0] == '7');
+  buffer.flush();
+  for (char c : ";Gw007#") if (c) buffer.add(c);
+  assert(buffer.ready() && buffer.checksum);
+  assert(buffer.getCmd()[0] == (char)6 && buffer.getCmd()[1] == '0');
+  buffer.flush();
+
   double value = 123.0;
   for (const char* text : {"", "nan", "NaN", "inf", "-inf", "1e999", "1e-999", "12junk", "12,3"}) {
     assert(!commandValidation::finiteDouble(text, value));
